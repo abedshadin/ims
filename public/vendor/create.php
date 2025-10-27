@@ -20,7 +20,15 @@ $currentUserName = Auth::userName();
 </head>
 <body>
 <div class="container py-5">
-    <div class="d-flex justify-content-end mb-3">
+    <div class="d-flex justify-content-between align-items-start mb-4">
+        <div>
+            <a class="btn btn-link px-0" href="../dashboard.php">&larr; Back to Dashboard</a>
+            <div class="btn-group mt-2" role="group" aria-label="Vendor shortcuts">
+                <a class="btn btn-outline-primary btn-sm" href="../vendor/index.php">Vendor List</a>
+                <a class="btn btn-outline-primary btn-sm" href="../files/create.php">Create File</a>
+                <a class="btn btn-outline-primary btn-sm" href="../files/index.php">File List</a>
+            </div>
+        </div>
         <div class="text-end">
             <?php if ($currentUserName): ?>
                 <div class="fw-semibold">Signed in as <?php echo htmlspecialchars($currentUserName, ENT_QUOTES, 'UTF-8'); ?></div>
