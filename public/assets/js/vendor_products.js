@@ -1,6 +1,6 @@
 document.addEventListener('DOMContentLoaded', () => {
-    const form = document.getElementById('vendorForm');
-    const alertBox = document.getElementById('formAlert');
+    const form = document.getElementById('productForm');
+    const alertBox = document.getElementById('productFormAlert');
 
     if (!form || !alertBox) {
         return;
@@ -20,10 +20,10 @@ document.addEventListener('DOMContentLoaded', () => {
         event.preventDefault();
 
         const submitButton = form.querySelector('[type="submit"]');
-        const formData = new FormData(form);
-        const endpoint = form.dataset.endpoint || form.getAttribute('action') || 'store.php';
+        const endpoint = form.dataset.endpoint || form.getAttribute('action') || 'products_store.php';
         const redirectTarget = form.dataset.redirect || '';
         const resetOnSuccess = form.dataset.resetOnSuccess !== 'false';
+        const formData = new FormData(form);
 
         resetAlert();
 
@@ -50,7 +50,7 @@ document.addEventListener('DOMContentLoaded', () => {
             }
 
             if (!response.ok || result.status !== 'success') {
-                throw new Error(result.message || 'Unable to save vendor information.');
+                throw new Error(result.message || 'Unable to save product information.');
             }
 
             showAlert(result.message, 'success');
@@ -69,7 +69,7 @@ document.addEventListener('DOMContentLoaded', () => {
             submitButton.disabled = false;
         }
     });
-    
+
     form.addEventListener('input', () => {
         if (!alertBox.classList.contains('d-none')) {
             resetAlert();

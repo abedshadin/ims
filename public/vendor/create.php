@@ -39,7 +39,7 @@ function e(string $value): string
 
     <div class="card shadow-sm">
         <div class="card-body">
-            <form id="vendorForm" method="post" novalidate>
+            <form id="vendorForm" method="post" data-endpoint="store.php" novalidate>
                 <div class="row g-3">
                     <div class="col-md-6">
                         <label class="form-label" for="vendor_name">Vendor Name</label>
