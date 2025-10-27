@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 require_once __DIR__ . '/../../app/Auth.php';
 
-$redirectTo = $_GET['redirect'] ?? '../vendor/create.php';
+$redirectTo = $_GET['redirect'] ?? '../dashboard.php';
 $errors = [];
 
 function resolveRedirect(string $target): string
@@ -12,7 +12,7 @@ function resolveRedirect(string $target): string
     $target = trim($target);
 
     if ($target === '' || preg_match('/^https?:/i', $target) || str_starts_with($target, '//')) {
-        return '../vendor/create.php';
+        return '../dashboard.php';
     }
 
     return $target;
@@ -21,7 +21,7 @@ function resolveRedirect(string $target): string
 $redirectTo = resolveRedirect($redirectTo);
 
 if (Auth::check()) {
-    header('Location: ' . ($redirectTo !== '' ? $redirectTo : '../vendor/create.php'));
+    header('Location: ' . ($redirectTo !== '' ? $redirectTo : '../dashboard.php'));
     exit;
 }
 
