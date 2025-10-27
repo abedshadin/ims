@@ -34,7 +34,7 @@ if ($vendorId <= 0) {
             $loadError = 'The requested vendor could not be found.';
         } else {
             $productsStatement = $pdo->prepare(
-                'SELECT id, product_name, product_size, unit, rate, item_weight, dec_unit_price, asses_unit_price, hs_code, created_at, updated_at
+                'SELECT id, product_name, brand, country_of_origin, product_category, product_size, unit, rate, item_weight, dec_unit_price, asses_unit_price, hs_code, created_at, updated_at
                  FROM vendor_products
                  WHERE vendor_id = :vendor_id
                  ORDER BY created_at DESC'
@@ -44,7 +44,7 @@ if ($vendorId <= 0) {
 
             if ($productId > 0) {
                 $editStatement = $pdo->prepare(
-                    'SELECT id, product_name, product_size, unit, rate, item_weight, dec_unit_price, asses_unit_price, hs_code
+                    'SELECT id, product_name, brand, country_of_origin, product_category, product_size, unit, rate, item_weight, dec_unit_price, asses_unit_price, hs_code
                      FROM vendor_products
                      WHERE id = :id AND vendor_id = :vendor_id'
                 );
@@ -63,6 +63,9 @@ if ($vendorId <= 0) {
 
 $defaultProductValues = [
     'product_name' => '',
+    'brand' => '',
+    'country_of_origin' => '',
+    'product_category' => '',
     'product_size' => '',
     'unit' => '',
     'rate' => '',
@@ -92,7 +95,7 @@ $redirectTarget = 'products.php?vendor_id=' . urlencode((string) $vendorId);
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-QWTKZyjpPEjISv5WaRU9OFeRpok6YctnYmDr5pNlyT2bRjXh0JMhjY6hW+ALEwIH" crossorigin="anonymous">
     <link rel="stylesheet" href="../assets/css/styles.css">
 </head>
-<body>
+<body class="bg-body-tertiary">
 <div class="container py-5">
     <div class="d-flex justify-content-between align-items-center mb-4">
         <div>
@@ -115,46 +118,98 @@ $redirectTarget = 'products.php?vendor_id=' . urlencode((string) $vendorId);
             <h2 class="h5 mt-3 mb-0">Managing products for: <span class="fw-semibold"><?php echo e($vendor['vendor_name']); ?></span></h2>
         </div>
 
-        <div class="card shadow-sm mb-4">
-            <div class="card-body">
-                <h2 class="h5 mb-3"><?php echo $isEditing ? 'Edit Product' : 'Add a New Product'; ?></h2>
-                <form id="productForm" method="post" data-endpoint="<?php echo e($formEndpoint); ?>" data-reset-on-success="<?php echo e($formResetSetting); ?>" data-redirect="<?php echo e($redirectTarget); ?>" novalidate>
+        <div class="card shadow-sm border-0 mb-4">
+            <div class="card-body p-4">
+                <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-3">
+                    <div>
+                        <h2 class="h5 mb-1"><?php echo $isEditing ? 'Edit Product' : 'Add a New Product'; ?></h2>
+                        <p class="text-muted mb-0">Complete the details below to keep product records consistent.</p>
+                    </div>
+                    <span class="badge text-bg-light">Vendor ID: <?php echo e((string) $vendorId); ?></span>
+                </div>
+                <form id="productForm" method="post" class="needs-validation" data-endpoint="<?php echo e($formEndpoint); ?>" data-reset-on-success="<?php echo e($formResetSetting); ?>" data-redirect="<?php echo e($redirectTarget); ?>" novalidate>
                     <input type="hidden" name="vendor_id" value="<?php echo e((string) $vendorId); ?>">
                     <?php if ($isEditing && isset($productToEdit['id'])): ?>
                         <input type="hidden" name="product_id" value="<?php echo e((string) $productToEdit['id']); ?>">
                     <?php endif; ?>
                     <div class="row g-3">
-                        <div class="col-md-6">
-                            <label class="form-label" for="product_name">Product Name</label>
-                            <input class="form-control" type="text" id="product_name" name="product_name" value="<?php echo e($productToEdit['product_name']); ?>" required>
+                        <div class="col-lg-6">
+                            <label class="form-label fw-semibold" for="product_name">Product Name</label>
+                            <input class="form-control" type="text" id="product_name" name="product_name" value="<?php echo e($productToEdit['product_name']); ?>" placeholder="e.g. Original Recipe Chicken" required>
                         </div>
-                        <div class="col-md-6">
-                            <label class="form-label" for="product_size">Size</label>
-                            <input class="form-control" type="text" id="product_size" name="product_size" value="<?php echo e($productToEdit['product_size']); ?>" required>
+                        <div class="col-lg-3">
+                            <label class="form-label fw-semibold" for="brand">Brand</label>
+                            <select class="form-select" id="brand" name="brand" required>
+                                <option value="" disabled <?php echo $productToEdit['brand'] === '' ? 'selected' : ''; ?>>Select brand</option>
+                                <?php
+                                $brandOptions = ['KFC', 'PH', 'KFC/PH'];
+                                foreach ($brandOptions as $brandOption):
+                                ?>
+                                    <option value="<?php echo e($brandOption); ?>" <?php echo $productToEdit['brand'] === $brandOption ? 'selected' : ''; ?>><?php echo e($brandOption); ?></option>
+                                <?php endforeach; ?>
+                            </select>
                         </div>
-                        <div class="col-md-4">
-                            <label class="form-label" for="unit">Unit</label>
-                            <input class="form-control" type="text" id="unit" name="unit" value="<?php echo e($productToEdit['unit']); ?>" required>
+                        <div class="col-lg-3">
+                            <label class="form-label fw-semibold" for="country_of_origin">COO</label>
+                            <input class="form-control" type="text" id="country_of_origin" name="country_of_origin" value="<?php echo e($productToEdit['country_of_origin']); ?>" placeholder="e.g. Malaysia" required>
                         </div>
-                        <div class="col-md-4">
-                            <label class="form-label" for="rate">Rate</label>
-                            <input class="form-control" type="number" step="0.01" id="rate" name="rate" value="<?php echo e($productToEdit['rate']); ?>" required>
+                        <div class="col-lg-3">
+                            <label class="form-label fw-semibold" for="product_category">Product Category</label>
+                            <select class="form-select" id="product_category" name="product_category" required>
+                                <option value="" disabled <?php echo $productToEdit['product_category'] === '' ? 'selected' : ''; ?>>Select category</option>
+                                <?php
+                                $categoryOptions = ['RM' => 'Raw Material (RM)', 'EQ' => 'Equipment (EQ)'];
+                                foreach ($categoryOptions as $value => $label):
+                                ?>
+                                    <option value="<?php echo e($value); ?>" <?php echo $productToEdit['product_category'] === $value ? 'selected' : ''; ?>><?php echo e($label); ?></option>
+                                <?php endforeach; ?>
+                            </select>
                         </div>
-                        <div class="col-md-4">
-                            <label class="form-label" for="item_weight">Item Weight</label>
-                            <input class="form-control" type="text" id="item_weight" name="item_weight" value="<?php echo e($productToEdit['item_weight']); ?>" required>
+                        <div class="col-lg-3">
+                            <label class="form-label fw-semibold" for="product_size">Size</label>
+                            <select class="form-select" id="product_size" name="product_size" required>
+                                <option value="" disabled <?php echo $productToEdit['product_size'] === '' ? 'selected' : ''; ?>>Select size</option>
+                                <?php
+                                $sizeOptions = ['Carton', 'Case', 'MTN'];
+                                foreach ($sizeOptions as $sizeOption):
+                                ?>
+                                    <option value="<?php echo e($sizeOption); ?>" <?php echo $productToEdit['product_size'] === $sizeOption ? 'selected' : ''; ?>><?php echo e($sizeOption); ?></option>
+                                <?php endforeach; ?>
+                            </select>
+                            <div class="form-text">Choose the pack size used for shipping.</div>
                         </div>
-                        <div class="col-md-6">
-                            <label class="form-label" for="dec_unit_price">Dec Unit Price</label>
-                            <input class="form-control" type="number" step="0.01" id="dec_unit_price" name="dec_unit_price" value="<?php echo e($productToEdit['dec_unit_price']); ?>" required>
+                        <div class="col-lg-3">
+                            <label class="form-label fw-semibold" for="unit">Unit</label>
+                            <input class="form-control" type="text" id="unit" name="unit" value="<?php echo e($productToEdit['unit']); ?>" placeholder="e.g. pcs, kg" required>
                         </div>
-                        <div class="col-md-6">
-                            <label class="form-label" for="asses_unit_price">Asses Unit Price</label>
-                            <input class="form-control" type="number" step="0.01" id="asses_unit_price" name="asses_unit_price" value="<?php echo e($productToEdit['asses_unit_price']); ?>" required>
+                        <div class="col-lg-3">
+                            <label class="form-label fw-semibold" for="rate">Unit Rate</label>
+                            <div class="input-group">
+                                <span class="input-group-text">$</span>
+                                <input class="form-control" type="number" step="0.01" id="rate" name="rate" value="<?php echo e($productToEdit['rate']); ?>" placeholder="0.00" required>
+                            </div>
                         </div>
-                        <div class="col-md-6">
-                            <label class="form-label" for="hs_code">HS Code</label>
-                            <input class="form-control" type="text" id="hs_code" name="hs_code" value="<?php echo e($productToEdit['hs_code']); ?>" required>
+                        <div class="col-lg-3">
+                            <label class="form-label fw-semibold" for="item_weight">Item Weight</label>
+                            <input class="form-control" type="text" id="item_weight" name="item_weight" value="<?php echo e($productToEdit['item_weight']); ?>" placeholder="e.g. 2.5 kg" required>
+                        </div>
+                        <div class="col-lg-6">
+                            <label class="form-label fw-semibold" for="dec_unit_price">Dec Unit Price</label>
+                            <div class="input-group">
+                                <span class="input-group-text">$</span>
+                                <input class="form-control" type="number" step="0.01" id="dec_unit_price" name="dec_unit_price" value="<?php echo e($productToEdit['dec_unit_price']); ?>" placeholder="0.00" required>
+                            </div>
+                        </div>
+                        <div class="col-lg-6">
+                            <label class="form-label fw-semibold" for="asses_unit_price">Asses Unit Price</label>
+                            <div class="input-group">
+                                <span class="input-group-text">$</span>
+                                <input class="form-control" type="number" step="0.01" id="asses_unit_price" name="asses_unit_price" value="<?php echo e($productToEdit['asses_unit_price']); ?>" placeholder="0.00" required>
+                            </div>
+                        </div>
+                        <div class="col-lg-6">
+                            <label class="form-label fw-semibold" for="hs_code">HS Code</label>
+                            <input class="form-control" type="text" id="hs_code" name="hs_code" value="<?php echo e($productToEdit['hs_code']); ?>" placeholder="Customs classification" required>
                         </div>
                     </div>
                     <div id="productFormAlert" class="alert d-none" role="alert"></div>
@@ -181,9 +236,12 @@ $redirectTarget = 'products.php?vendor_id=' . urlencode((string) $vendorId);
                             <thead>
                                 <tr>
                                     <th scope="col">Product</th>
+                                    <th scope="col">Brand</th>
+                                    <th scope="col">COO</th>
+                                    <th scope="col">Category</th>
                                     <th scope="col">Size</th>
                                     <th scope="col">Unit</th>
-                                    <th scope="col">Rate</th>
+                                    <th scope="col">Unit Rate</th>
                                     <th scope="col">Item Weight</th>
                                     <th scope="col">Dec Unit Price</th>
                                     <th scope="col">Asses Unit Price</th>
@@ -195,6 +253,12 @@ $redirectTarget = 'products.php?vendor_id=' . urlencode((string) $vendorId);
                                 <?php foreach ($products as $product): ?>
                                     <tr>
                                         <td class="fw-semibold"><?php echo e($product['product_name']); ?></td>
+                                        <td><?php echo e($product['brand']); ?></td>
+                                        <td><?php echo e($product['country_of_origin']); ?></td>
+                                        <td>
+                                            <?php $categoryLabel = $product['product_category'] === 'EQ' ? 'Equipment' : 'Raw Material'; ?>
+                                            <span class="badge text-bg-primary-subtle border border-primary-subtle text-primary-emphasis"><?php echo e($categoryLabel); ?></span>
+                                        </td>
                                         <td><?php echo e($product['product_size']); ?></td>
                                         <td><?php echo e($product['unit']); ?></td>
                                         <td><?php echo e(number_format((float) $product['rate'], 2)); ?></td>

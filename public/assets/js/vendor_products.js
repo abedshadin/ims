@@ -27,6 +27,14 @@ document.addEventListener('DOMContentLoaded', () => {
 
         resetAlert();
 
+        if (!form.checkValidity()) {
+            form.classList.add('was-validated');
+            showAlert('Please fill in all required fields before submitting.', 'warning');
+            return;
+        }
+
+        form.classList.remove('was-validated');
+
         try {
             submitButton.disabled = true;
 
@@ -73,6 +81,10 @@ document.addEventListener('DOMContentLoaded', () => {
     form.addEventListener('input', () => {
         if (!alertBox.classList.contains('d-none')) {
             resetAlert();
+        }
+
+        if (form.classList.contains('was-validated')) {
+            form.classList.remove('was-validated');
         }
     });
 });

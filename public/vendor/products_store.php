@@ -38,6 +38,9 @@ if ($vendorId <= 0) {
 
 $requiredFields = [
     'product_name',
+    'brand',
+    'country_of_origin',
+    'product_category',
     'product_size',
     'unit',
     'rate',
@@ -77,6 +80,36 @@ foreach ($numericFields as $field) {
     $input[$field] = number_format((float) $input[$field], 2, '.', '');
 }
 
+$allowedBrandValues = ['KFC', 'PH', 'KFC/PH'];
+if (!in_array($input['brand'], $allowedBrandValues, true)) {
+    http_response_code(422);
+    echo json_encode([
+        'status' => 'error',
+        'message' => 'Brand selection is invalid.',
+    ]);
+    exit;
+}
+
+$allowedCategories = ['RM', 'EQ'];
+if (!in_array($input['product_category'], $allowedCategories, true)) {
+    http_response_code(422);
+    echo json_encode([
+        'status' => 'error',
+        'message' => 'Product category selection is invalid.',
+    ]);
+    exit;
+}
+
+$allowedSizes = ['Carton', 'Case', 'MTN'];
+if (!in_array($input['product_size'], $allowedSizes, true)) {
+    http_response_code(422);
+    echo json_encode([
+        'status' => 'error',
+        'message' => 'Size selection is invalid.',
+    ]);
+    exit;
+}
+
 try {
     $pdo = Database::getConnection();
 
@@ -96,6 +129,9 @@ try {
         'INSERT INTO vendor_products (
             vendor_id,
             product_name,
+            brand,
+            country_of_origin,
+            product_category,
             product_size,
             unit,
             rate,
@@ -108,6 +144,9 @@ try {
         ) VALUES (
             :vendor_id,
             :product_name,
+            :brand,
+            :country_of_origin,
+            :product_category,
             :product_size,
             :unit,
             :rate,
@@ -123,6 +162,9 @@ try {
     $statement->execute([
         ':vendor_id' => $vendorId,
         ':product_name' => $input['product_name'],
+        ':brand' => $input['brand'],
+        ':country_of_origin' => $input['country_of_origin'],
+        ':product_category' => $input['product_category'],
         ':product_size' => $input['product_size'],
         ':unit' => $input['unit'],
         ':rate' => $input['rate'],
