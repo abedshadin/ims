@@ -21,20 +21,23 @@ document.addEventListener('DOMContentLoaded', () => {
 
         const submitButton = form.querySelector('[type="submit"]');
         const formData = new FormData(form);
+        const endpoint = form.dataset.endpoint || form.getAttribute('action') || 'store.php';
+        const redirectTarget = form.dataset.redirect || '';
+        const resetOnSuccess = form.dataset.resetOnSuccess !== 'false';
 
         resetAlert();
 
         try {
             submitButton.disabled = true;
 
-            const response = await fetch('store.php', {
+            const response = await fetch(endpoint, {
                 method: 'POST',
                 body: formData,
             });
 
             if (response.status === 401) {
-                const redirectTarget = `${window.location.pathname}${window.location.search}`;
-                window.location.href = `../auth/login.php?redirect=${encodeURIComponent(redirectTarget)}`;
+                const loginRedirect = `${window.location.pathname}${window.location.search}`;
+                window.location.href = `../auth/login.php?redirect=${encodeURIComponent(loginRedirect)}`;
                 return;
             }
 
@@ -51,7 +54,15 @@ document.addEventListener('DOMContentLoaded', () => {
             }
 
             showAlert(result.message, 'success');
-            form.reset();
+
+            if (redirectTarget) {
+                window.location.href = redirectTarget;
+                return;
+            }
+
+            if (resetOnSuccess) {
+                form.reset();
+            }
         } catch (error) {
             showAlert(error.message, 'danger');
         } finally {
