@@ -3,12 +3,9 @@
 declare(strict_types=1);
 
 require_once __DIR__ . '/../app/Auth.php';
+require_once __DIR__ . '/../app/Redirect.php';
 
-$redirectTarget = $_GET['redirect'] ?? '';
-
-if ($redirectTarget !== '' && (preg_match('/^https?:/i', $redirectTarget) || str_starts_with($redirectTarget, '//'))) {
-    $redirectTarget = '';
-}
+$redirectTarget = sanitize_redirect_target($_GET['redirect'] ?? '');
 
 if (Auth::check()) {
     $destination = $redirectTarget !== '' ? $redirectTarget : 'dashboard.php';
