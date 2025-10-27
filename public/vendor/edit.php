@@ -4,15 +4,17 @@ declare(strict_types=1);
 
 require_once __DIR__ . '/../../app/Auth.php';
 require_once __DIR__ . '/../../app/Database.php';
+require_once __DIR__ . '/../../app/IdCipher.php';
 
 Auth::requireLogin('/auth/login.php');
 
 $currentUserName = Auth::userName();
-$vendorId = isset($_GET['id']) ? (int) $_GET['id'] : 0;
+$encodedVendorId = isset($_GET['id']) ? (string) $_GET['id'] : '';
+$vendorId = $encodedVendorId !== '' ? IdCipher::decode($encodedVendorId) : null;
 $loadError = null;
 $vendor = null;
 
-if ($vendorId <= 0) {
+if ($vendorId === null) {
     $loadError = 'A valid vendor was not specified.';
 } else {
     try {
@@ -27,6 +29,19 @@ if ($vendorId <= 0) {
     } catch (\PDOException $exception) {
         $loadError = 'Unable to load vendor information right now. Please try again later.';
     }
+}
+
+$vendorToken = null;
+if ($vendor && isset($vendor['id'])) {
+    try {
+        $vendorToken = IdCipher::encode((int) $vendor['id']);
+    } catch (InvalidArgumentException|RuntimeException $exception) {
+        $vendorToken = null;
+    }
+}
+
+if ($vendor !== null && $vendorToken === null) {
+    $loadError = 'Unable to prepare vendor details for editing. Please try again later.';
 }
 
 function e(?string $value): string
@@ -64,7 +79,9 @@ function e(?string $value): string
                 <div class="alert alert-danger mb-0" role="alert"><?php echo e($loadError); ?></div>
             <?php else: ?>
                 <form id="vendorForm" method="post" data-endpoint="update.php" data-reset-on-success="false" data-redirect="index.php" novalidate>
-                    <input type="hidden" name="vendor_id" value="<?php echo e((string) $vendor['id']); ?>">
+                    <?php if ($vendorToken !== null): ?>
+                        <input type="hidden" name="vendor_id" value="<?php echo e($vendorToken); ?>">
+                    <?php endif; ?>
                     <div class="row g-3">
                         <div class="col-md-6">
                             <label class="form-label" for="vendor_name">Vendor Name</label>

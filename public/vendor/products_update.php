@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 require_once __DIR__ . '/../../app/Auth.php';
 require_once __DIR__ . '/../../app/Database.php';
+require_once __DIR__ . '/../../app/IdCipher.php';
 
 header('Content-Type: application/json');
 
@@ -25,10 +26,12 @@ if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
     exit;
 }
 
-$vendorId = isset($_POST['vendor_id']) ? (int) $_POST['vendor_id'] : 0;
-$productId = isset($_POST['product_id']) ? (int) $_POST['product_id'] : 0;
+$vendorToken = isset($_POST['vendor_id']) ? (string) $_POST['vendor_id'] : '';
+$productToken = isset($_POST['product_id']) ? (string) $_POST['product_id'] : '';
+$vendorId = $vendorToken !== '' ? IdCipher::decode($vendorToken) : null;
+$productId = $productToken !== '' ? IdCipher::decode($productToken) : null;
 
-if ($vendorId <= 0 || $productId <= 0) {
+if ($vendorId === null || $productId === null) {
     http_response_code(422);
     echo json_encode([
         'status' => 'error',

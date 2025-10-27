@@ -4,24 +4,28 @@ declare(strict_types=1);
 
 require_once __DIR__ . '/../../app/Auth.php';
 require_once __DIR__ . '/../../app/Database.php';
+require_once __DIR__ . '/../../app/IdCipher.php';
 
 Auth::requireLogin('/auth/login.php');
 
 $currentUserName = Auth::userName();
-$vendorId = isset($_GET['vendor_id']) ? (int) $_GET['vendor_id'] : 0;
-$productId = isset($_GET['product_id']) ? (int) $_GET['product_id'] : 0;
+$vendorToken = isset($_GET['vendor_id']) ? (string) $_GET['vendor_id'] : '';
+$productToken = isset($_GET['product_id']) ? (string) $_GET['product_id'] : '';
+$vendorId = $vendorToken !== '' ? IdCipher::decode($vendorToken) : null;
+$productId = $productToken !== '' ? IdCipher::decode($productToken) : null;
 $loadError = null;
 $vendor = null;
 $products = [];
 $productToEdit = null;
 $isEditing = false;
+$encodedVendorId = null;
 
 function e(?string $value): string
 {
     return htmlspecialchars((string) $value, ENT_QUOTES, 'UTF-8');
 }
 
-if ($vendorId <= 0) {
+if ($vendorId === null) {
     $loadError = 'A valid vendor was not specified.';
 } else {
     try {
@@ -33,27 +37,35 @@ if ($vendorId <= 0) {
         if (!$vendor) {
             $loadError = 'The requested vendor could not be found.';
         } else {
-            $productsStatement = $pdo->prepare(
-                'SELECT id, product_name, brand, country_of_origin, product_category, product_size, unit, rate, item_weight, dec_unit_price, asses_unit_price, hs_code, created_at, updated_at
-                 FROM vendor_products
-                 WHERE vendor_id = :vendor_id
-                 ORDER BY created_at DESC'
-            );
-            $productsStatement->execute([':vendor_id' => $vendorId]);
-            $products = $productsStatement->fetchAll();
+            try {
+                $encodedVendorId = IdCipher::encode((int) $vendor['id']);
+            } catch (InvalidArgumentException|RuntimeException $exception) {
+                $loadError = 'Unable to prepare vendor details at this time. Please try again later.';
+            }
 
-            if ($productId > 0) {
-                $editStatement = $pdo->prepare(
-                    'SELECT id, product_name, brand, country_of_origin, product_category, product_size, unit, rate, item_weight, dec_unit_price, asses_unit_price, hs_code
+            if ($loadError === null) {
+                $productsStatement = $pdo->prepare(
+                    'SELECT id, product_name, brand, country_of_origin, product_category, product_size, unit, rate, item_weight, dec_unit_price, asses_unit_price, hs_code, created_at, updated_at
                      FROM vendor_products
-                     WHERE id = :id AND vendor_id = :vendor_id'
+                     WHERE vendor_id = :vendor_id
+                     ORDER BY created_at DESC'
                 );
-                $editStatement->execute([
-                    ':id' => $productId,
-                    ':vendor_id' => $vendorId,
-                ]);
-                $productToEdit = $editStatement->fetch();
-                $isEditing = $productToEdit !== false && $productToEdit !== null;
+                $productsStatement->execute([':vendor_id' => $vendorId]);
+                $products = $productsStatement->fetchAll();
+
+                if ($productId !== null) {
+                    $editStatement = $pdo->prepare(
+                        'SELECT id, product_name, brand, country_of_origin, product_category, product_size, unit, rate, item_weight, dec_unit_price, asses_unit_price, hs_code
+                         FROM vendor_products
+                         WHERE id = :id AND vendor_id = :vendor_id'
+                    );
+                    $editStatement->execute([
+                        ':id' => $productId,
+                        ':vendor_id' => $vendorId,
+                    ]);
+                    $productToEdit = $editStatement->fetch();
+                    $isEditing = $productToEdit !== false && $productToEdit !== null;
+                }
             }
         }
     } catch (\PDOException $exception) {
@@ -81,10 +93,22 @@ if (!$isEditing) {
     $productToEdit = array_merge($defaultProductValues, $productToEdit);
 }
 
+$productToken = null;
+if ($isEditing && isset($productToEdit['id'])) {
+    try {
+        $productToken = IdCipher::encode((int) $productToEdit['id']);
+    } catch (InvalidArgumentException|RuntimeException $exception) {
+        $isEditing = false;
+        $productToEdit = $defaultProductValues;
+        $productToken = null;
+    }
+}
+
 $formEndpoint = $isEditing ? 'products_update.php' : 'products_store.php';
 $formSubmitLabel = $isEditing ? 'Update Product' : 'Add Product';
 $formResetSetting = $isEditing ? 'false' : 'true';
-$redirectTarget = 'products.php?vendor_id=' . urlencode((string) $vendorId);
+$redirectToken = $encodedVendorId ?? '';
+$redirectTarget = $redirectToken !== '' ? 'products.php?vendor_id=' . urlencode($redirectToken) : 'products.php';
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -125,12 +149,16 @@ $redirectTarget = 'products.php?vendor_id=' . urlencode((string) $vendorId);
                         <h2 class="h5 mb-1"><?php echo $isEditing ? 'Edit Product' : 'Add a New Product'; ?></h2>
                         <p class="text-muted mb-0">Complete the details below to keep product records consistent.</p>
                     </div>
-                    <span class="badge text-bg-light">Vendor ID: <?php echo e((string) $vendorId); ?></span>
+                    <?php if ($encodedVendorId !== null): ?>
+                        <span class="badge text-bg-light">Vendor Reference: <?php echo e($encodedVendorId); ?></span>
+                    <?php endif; ?>
                 </div>
                 <form id="productForm" method="post" class="needs-validation" data-endpoint="<?php echo e($formEndpoint); ?>" data-reset-on-success="<?php echo e($formResetSetting); ?>" data-redirect="<?php echo e($redirectTarget); ?>" novalidate>
-                    <input type="hidden" name="vendor_id" value="<?php echo e((string) $vendorId); ?>">
-                    <?php if ($isEditing && isset($productToEdit['id'])): ?>
-                        <input type="hidden" name="product_id" value="<?php echo e((string) $productToEdit['id']); ?>">
+                    <?php if ($encodedVendorId !== null): ?>
+                        <input type="hidden" name="vendor_id" value="<?php echo e($encodedVendorId); ?>">
+                    <?php endif; ?>
+                    <?php if ($isEditing && $productToken !== null): ?>
+                        <input type="hidden" name="product_id" value="<?php echo e($productToken); ?>">
                     <?php endif; ?>
                     <div class="row g-3">
                         <div class="col-lg-6">
@@ -216,7 +244,7 @@ $redirectTarget = 'products.php?vendor_id=' . urlencode((string) $vendorId);
                     <div class="mt-4 d-flex gap-2">
                         <button class="btn btn-primary" type="submit"><?php echo e($formSubmitLabel); ?></button>
                         <?php if ($isEditing): ?>
-                            <a class="btn btn-outline-secondary" href="products.php?vendor_id=<?php echo urlencode((string) $vendorId); ?>">Cancel Editing</a>
+                            <a class="btn btn-outline-secondary" href="products.php?vendor_id=<?php echo urlencode($redirectToken); ?>">Cancel Editing</a>
                         <?php else: ?>
                             <button class="btn btn-outline-secondary" type="reset">Clear</button>
                         <?php endif; ?>
@@ -232,7 +260,7 @@ $redirectTarget = 'products.php?vendor_id=' . urlencode((string) $vendorId);
                     <p class="text-muted mb-0">No products have been added for this vendor yet.</p>
                 <?php else: ?>
                     <div class="table-responsive">
-                        <table class="table table-striped align-middle mb-0">
+                        <table id="existingProducts" class="table table-striped align-middle mb-0">
                             <thead>
                                 <tr>
                                     <th scope="col">Product</th>
@@ -251,6 +279,13 @@ $redirectTarget = 'products.php?vendor_id=' . urlencode((string) $vendorId);
                             </thead>
                             <tbody>
                                 <?php foreach ($products as $product): ?>
+                                    <?php
+                                    try {
+                                        $productRowToken = IdCipher::encode((int) $product['id']);
+                                    } catch (InvalidArgumentException|RuntimeException $exception) {
+                                        $productRowToken = '';
+                                    }
+                                    ?>
                                     <tr>
                                         <td class="fw-semibold"><?php echo e($product['product_name']); ?></td>
                                         <td><?php echo e($product['brand']); ?></td>
@@ -267,7 +302,23 @@ $redirectTarget = 'products.php?vendor_id=' . urlencode((string) $vendorId);
                                         <td><?php echo e(number_format((float) $product['asses_unit_price'], 2)); ?></td>
                                         <td><?php echo e($product['hs_code']); ?></td>
                                         <td class="text-end">
-                                            <a class="btn btn-outline-primary btn-sm" href="products.php?vendor_id=<?php echo urlencode((string) $vendorId); ?>&product_id=<?php echo urlencode((string) $product['id']); ?>">Edit</a>
+                                            <div class="d-inline-flex gap-2">
+                                                <?php if ($productRowToken !== '' && $redirectToken !== ''): ?>
+                                                    <a class="btn btn-outline-primary btn-sm" href="products.php?vendor_id=<?php echo urlencode($redirectToken); ?>&product_id=<?php echo urlencode($productRowToken); ?>">Edit</a>
+                                                    <button
+                                                        class="btn btn-outline-danger btn-sm js-delete-product"
+                                                        type="button"
+                                                        data-endpoint="products_delete.php"
+                                                        data-vendor-id="<?php echo e($redirectToken); ?>"
+                                                        data-product-id="<?php echo e($productRowToken); ?>"
+                                                        data-product-name="<?php echo e($product['product_name']); ?>"
+                                                    >
+                                                        Delete
+                                                    </button>
+                                                <?php else: ?>
+                                                    <span class="text-muted small">Unavailable</span>
+                                                <?php endif; ?>
+                                            </div>
                                         </td>
                                     </tr>
                                 <?php endforeach; ?>

@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 require_once __DIR__ . '/../../app/Auth.php';
 require_once __DIR__ . '/../../app/Database.php';
+require_once __DIR__ . '/../../app/IdCipher.php';
 
 Auth::requireLogin('/auth/login.php');
 
@@ -95,8 +96,19 @@ function formatDate(?string $value): string
                                     <td><?php echo e($vendor['created_by_name'] ?? '—'); ?></td>
                                     <td class="text-end">
                                         <div class="d-flex justify-content-end gap-2">
-                                            <a class="btn btn-outline-primary btn-sm" href="edit.php?id=<?php echo urlencode((string) $vendor['id']); ?>">Edit Info</a>
-                                            <a class="btn btn-outline-secondary btn-sm" href="products.php?vendor_id=<?php echo urlencode((string) $vendor['id']); ?>">Add Products</a>
+                                            <?php
+                                            try {
+                                                $encodedVendorId = IdCipher::encode((int) $vendor['id']);
+                                            } catch (InvalidArgumentException|RuntimeException $exception) {
+                                                $encodedVendorId = '';
+                                            }
+                                            ?>
+                                            <?php if ($encodedVendorId !== ''): ?>
+                                                <a class="btn btn-outline-primary btn-sm" href="edit.php?id=<?php echo urlencode($encodedVendorId); ?>">Edit Info</a>
+                                                <a class="btn btn-outline-secondary btn-sm" href="products.php?vendor_id=<?php echo urlencode($encodedVendorId); ?>">Add Products</a>
+                                            <?php else: ?>
+                                                <span class="text-muted small align-self-center">Actions unavailable</span>
+                                            <?php endif; ?>
                                         </div>
                                     </td>
                                 </tr>
