@@ -21,20 +21,26 @@ document.addEventListener('DOMContentLoaded', () => {
 
         const submitButton = form.querySelector('[type="submit"]');
         const formData = new FormData(form);
+        const endpoint = form.dataset.endpoint || form.getAttribute('action') || 'store.php';
+        const redirectTarget = form.dataset.redirect || '';
+        const resetOnSuccess = form.dataset.resetOnSuccess !== 'false';
+        const autoFileInput = form.querySelector('[data-auto-file-name]');
 
         resetAlert();
 
         try {
-            submitButton.disabled = true;
+            if (submitButton) {
+                submitButton.disabled = true;
+            }
 
-            const response = await fetch('store.php', {
+            const response = await fetch(endpoint, {
                 method: 'POST',
                 body: formData,
             });
 
             if (response.status === 401) {
-                const redirectTarget = `${window.location.pathname}${window.location.search}`;
-                window.location.href = `../auth/login.php?redirect=${encodeURIComponent(redirectTarget)}`;
+                const loginRedirect = `${window.location.pathname}${window.location.search}`;
+                window.location.href = `../auth/login.php?redirect=${encodeURIComponent(loginRedirect)}`;
                 return;
             }
 
@@ -50,15 +56,36 @@ document.addEventListener('DOMContentLoaded', () => {
                 throw new Error(result.message || 'Unable to save vendor information.');
             }
 
-            showAlert(result.message, 'success');
-            form.reset();
+            const successMessage = result.file_name
+                ? `${result.message} Reference: ${result.file_name}.`
+                : result.message;
+
+            showAlert(successMessage, 'success');
+
+            if (redirectTarget) {
+                window.location.href = redirectTarget;
+                return;
+            }
+
+            if (resetOnSuccess) {
+                const nextAutoValue = result.next_file_name || result.file_name || (autoFileInput ? autoFileInput.value : '');
+                form.reset();
+
+                if (autoFileInput && nextAutoValue) {
+                    autoFileInput.value = nextAutoValue;
+                }
+            } else if (autoFileInput && (result.next_file_name || result.file_name)) {
+                autoFileInput.value = result.next_file_name || result.file_name;
+            }
         } catch (error) {
             showAlert(error.message, 'danger');
         } finally {
-            submitButton.disabled = false;
+            if (submitButton) {
+                submitButton.disabled = false;
+            }
         }
     });
-    
+
     form.addEventListener('input', () => {
         if (!alertBox.classList.contains('d-none')) {
             resetAlert();
