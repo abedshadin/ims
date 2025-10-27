@@ -3,8 +3,10 @@
 declare(strict_types=1);
 
 require_once __DIR__ . '/../../app/Auth.php';
+require_once __DIR__ . '/../../app/Redirect.php';
 
-$redirectTo = $_GET['redirect'] ?? '../dashboard.php';
+$requestedRedirect = sanitize_redirect_target($_GET['redirect'] ?? '');
+$redirectDestination = resolve_redirect_target($requestedRedirect, '../dashboard.php');
 $errors = [];
 $successMessage = '';
 
@@ -12,33 +14,26 @@ if (isset($_GET['registered'])) {
     $successMessage = 'Registration successful. Please sign in.';
 }
 
-function resolveRedirect(string $target): string
-{
-    $target = trim($target);
-
-    if ($target === '' || preg_match('/^https?:/i', $target) || str_starts_with($target, '//')) {
-        return '../dashboard.php';
-    }
-
-    return $target;
-}
-
-$redirectTo = resolveRedirect($redirectTo);
-
 if (Auth::check()) {
-    header('Location: ' . ($redirectTo !== '' ? $redirectTo : '../dashboard.php'));
+    header('Location: ' . $redirectDestination);
     exit;
 }
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    $redirectTo = resolveRedirect($_POST['redirect'] ?? $redirectTo);
+    $postedRedirect = sanitize_redirect_target($_POST['redirect'] ?? '');
+
+    if ($postedRedirect !== '') {
+        $requestedRedirect = $postedRedirect;
+    }
+
+    $redirectDestination = resolve_redirect_target($requestedRedirect, '../dashboard.php');
     $email = $_POST['email'] ?? '';
     $password = $_POST['password'] ?? '';
 
     if (!Auth::attempt($email, $password)) {
         $errors[] = 'Invalid email or password.';
     } else {
-        header('Location: ' . ($redirectTo !== '' ? $redirectTo : '../dashboard.php'));
+        header('Location: ' . $redirectDestination);
         exit;
     }
 }
@@ -81,7 +76,7 @@ function e(string $value): string
                     <?php endif; ?>
 
                     <form method="post" novalidate>
-                        <input type="hidden" name="redirect" value="<?php echo e($redirectTo); ?>">
+                        <input type="hidden" name="redirect" value="<?php echo e($redirectDestination); ?>">
                         <div class="mb-3">
                             <label for="email" class="form-label">Email address</label>
                             <input type="email" class="form-control" id="email" name="email" required autofocus value="<?php echo e($_POST['email'] ?? ''); ?>">
@@ -96,7 +91,7 @@ function e(string $value): string
                     </form>
                 </div>
                 <div class="card-footer text-center">
-                    <small class="text-muted">Don't have an account? <a href="register.php<?php echo $redirectTo ? '?redirect=' . urlencode($redirectTo) : ''; ?>">Create one</a>.</small>
+                    <small class="text-muted">Don't have an account? <a href="register.php<?php echo $redirectDestination ? '?redirect=' . urlencode($redirectDestination) : ''; ?>">Create one</a>.</small>
                 </div>
             </div>
         </div>
