@@ -606,6 +606,21 @@ if ($file !== null) {
 
                             <div id="productFormAlert" class="alert d-none mt-4" role="alert"></div>
                         </form>
+                        <div class="border-top pt-4 mt-4">
+                            <div class="d-flex flex-column flex-lg-row justify-content-between align-items-lg-center gap-2">
+                                <div>
+                                    <span class="text-uppercase small fw-semibold text-muted">Remove Existing Product</span>
+                                    <p class="text-muted small mb-0">Select a product already linked to this proforma invoice to remove it instantly.</p>
+                                </div>
+                                <div class="d-flex flex-column flex-lg-row gap-2 w-100 w-lg-auto align-items-stretch align-items-lg-center">
+                                    <select class="form-select" id="pi_product_id" name="pi_product_id">
+                                        <option value="">Select a product to remove</option>
+                                    </select>
+                                    <button class="btn btn-outline-danger" type="button" id="piProductRemoveButton">Remove Product</button>
+                                </div>
+                            </div>
+                            <div id="piProductRemoveAlert" class="alert d-none mt-3" role="alert"></div>
+                        </div>
                     </div>
                     <div class="modal-footer">
                         <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>

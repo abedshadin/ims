@@ -40,6 +40,9 @@ document.addEventListener('DOMContentLoaded', () => {
     const existingProductFields = document.getElementById('existingProductFields');
     const newProductFields = document.getElementById('newProductFields');
     const productAlertBox = document.getElementById('productFormAlert');
+    const piProductSelect = document.getElementById('pi_product_id');
+    const piProductRemoveButton = document.getElementById('piProductRemoveButton');
+    const piProductRemoveAlert = document.getElementById('piProductRemoveAlert');
     const productPreview = document.getElementById('vendorProductPreview');
     const previewFields = productPreview ? productPreview.querySelectorAll('[data-preview]') : [];
     const fileMetaCreated = document.getElementById('fileMetaCreated');
@@ -418,6 +421,51 @@ document.addEventListener('DOMContentLoaded', () => {
         return card;
     };
 
+    const deletePiProduct = async (piToken, productToken) => {
+        const formData = new FormData();
+        formData.set('pi_token', piToken);
+        formData.set('product_token', productToken);
+
+        const response = await fetch('proforma_products_delete.php', {
+            method: 'POST',
+            body: formData,
+        });
+
+        if (response.status === 401) {
+            window.location.reload();
+            throw new Error('Session expired. Reloading.');
+        }
+
+        let result;
+
+        try {
+            result = await response.json();
+        } catch (error) {
+            throw new Error('Unexpected response received.');
+        }
+
+        if (!response.ok || result.status !== 'success') {
+            throw new Error(result.message || 'Unable to remove the product.');
+        }
+
+        const pi = state.proformas.find((item) => item.token === piToken);
+        if (pi) {
+            pi.products = (pi.products || []).filter((product) => product.token !== productToken);
+        }
+
+        if (result.file_meta) {
+            updateFileMeta(result.file_meta);
+        }
+
+        refreshPiList();
+
+        if (activePiToken === piToken) {
+            populatePiProductRemovalOptions(piToken);
+        }
+
+        return result;
+    };
+
     const refreshPiList = () => {
         if (!piList) {
             return;
@@ -438,6 +486,40 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     };
 
+    const populatePiProductRemovalOptions = (piToken) => {
+        if (!piProductSelect) {
+            return;
+        }
+
+        piProductSelect.innerHTML = '<option value="">Select a product to remove</option>';
+
+        const pi = state.proformas.find((item) => item.token === piToken);
+        const products = pi && Array.isArray(pi.products) ? pi.products : [];
+
+        products
+            .filter((product) => product && product.token)
+            .forEach((product) => {
+                const option = document.createElement('option');
+                option.value = product.token;
+                const name = product.product_name || 'Unnamed Product';
+                const brand = product.brand ? ` · ${product.brand}` : '';
+                option.textContent = `${name}${brand}`;
+                piProductSelect.append(option);
+            });
+
+        const hasProducts = products.some((product) => product && product.token);
+
+        piProductSelect.disabled = !hasProducts;
+        
+        if (piProductRemoveButton) {
+            piProductRemoveButton.disabled = !hasProducts;
+        }
+
+        if (!hasProducts) {
+            piProductSelect.value = '';
+        }
+    };
+
     const openProductModal = (piToken) => {
         if (!productForm || !productModalElement) {
             return;
@@ -446,6 +528,7 @@ document.addEventListener('DOMContentLoaded', () => {
         activePiToken = piToken;
         productForm.reset();
         resetAlert(productAlertBox);
+        resetAlert(piProductRemoveAlert);
 
         const piTokenInput = productForm.querySelector('#pi_token');
         if (piTokenInput) {
@@ -455,6 +538,7 @@ document.addEventListener('DOMContentLoaded', () => {
         populateVendorProductSelect();
         updateProductPreview();
         toggleProductMode();
+        populatePiProductRemovalOptions(piToken);
 
         if (!productModalInstance) {
             productModalInstance = new bootstrap.Modal(productModalElement);
@@ -646,42 +730,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
                     try {
                         resetAlert(piAlert);
-                        const formData = new FormData();
-                        formData.set('pi_token', piToken);
-                        formData.set('product_token', productToken);
-
-                        const response = await fetch('proforma_products_delete.php', {
-                            method: 'POST',
-                            body: formData,
-                        });
-
-                        if (response.status === 401) {
-                            window.location.reload();
-                            return;
-                        }
-
-                        let result;
-
-                        try {
-                            result = await response.json();
-                        } catch (error) {
-                            throw new Error('Unexpected response received.');
-                        }
-
-                        if (!response.ok || result.status !== 'success') {
-                            throw new Error(result.message || 'Unable to remove the product.');
-                        }
-
-                        const pi = state.proformas.find((item) => item.token === piToken);
-                        if (pi) {
-                            pi.products = (pi.products || []).filter((product) => product.token !== productToken);
-                        }
-
-                        if (result.file_meta) {
-                            updateFileMeta(result.file_meta);
-                        }
-
-                        refreshPiList();
+                        const result = await deletePiProduct(piToken, productToken);
                         showAlert(piAlert, result.message || 'Product removed.', 'success');
                     } catch (error) {
                         showAlert(piAlert, error.message, 'danger');
@@ -706,6 +755,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (productFormSubmit && productForm) {
             productFormSubmit.addEventListener('click', async () => {
                 resetAlert(productAlertBox);
+                resetAlert(piProductRemoveAlert);
 
                 const submitButton = productFormSubmit;
                 submitButton.disabled = true;
@@ -767,6 +817,49 @@ document.addEventListener('DOMContentLoaded', () => {
                     showAlert(productAlertBox, error.message, 'danger');
                 } finally {
                     submitButton.disabled = false;
+                }
+            });
+        }
+
+        if (piProductRemoveButton) {
+            piProductRemoveButton.addEventListener('click', async () => {
+                if (!activePiToken) {
+                    showAlert(piProductRemoveAlert, 'Select a proforma invoice before removing products.', 'warning');
+                    return;
+                }
+
+                if (!piProductSelect || piProductSelect.disabled) {
+                    showAlert(piProductRemoveAlert, 'There are no products available to remove.', 'info');
+                    return;
+                }
+
+                const selectedToken = piProductSelect.value;
+
+                if (!selectedToken) {
+                    showAlert(piProductRemoveAlert, 'Choose a product to remove.', 'warning');
+                    return;
+                }
+
+                if (!window.confirm('Remove the selected product from this proforma invoice?')) {
+                    return;
+                }
+
+                const originalText = piProductRemoveButton.innerHTML;
+                piProductRemoveButton.disabled = true;
+                piProductRemoveButton.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>';
+
+                try {
+                    resetAlert(piProductRemoveAlert);
+                    const result = await deletePiProduct(activePiToken, selectedToken);
+                    populatePiProductRemovalOptions(activePiToken);
+                    showAlert(piProductRemoveAlert, result.message || 'Product removed from the proforma invoice.', 'success');
+                    showAlert(piAlert, result.message || 'Product removed from the proforma invoice.', 'success');
+                } catch (error) {
+                    showAlert(piProductRemoveAlert, error.message, 'danger');
+                } finally {
+                    piProductRemoveButton.disabled = false;
+                    piProductRemoveButton.innerHTML = originalText;
+                    populatePiProductRemovalOptions(activePiToken);
                 }
             });
         }
