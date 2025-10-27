@@ -83,3 +83,20 @@ CREATE TABLE IF NOT EXISTS proforma_invoice_products (
     CONSTRAINT fk_invoice_products_invoice FOREIGN KEY (proforma_invoice_id) REFERENCES proforma_invoices(id) ON DELETE CASCADE,
     CONSTRAINT fk_invoice_products_vendor_product FOREIGN KEY (vendor_product_id) REFERENCES vendor_products(id) ON DELETE SET NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS file_letters_of_credit (
+    id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    vendor_file_id BIGINT UNSIGNED NOT NULL,
+    lc_number VARCHAR(100) NOT NULL,
+    lc_date DATE NOT NULL,
+    lc_type VARCHAR(100) NOT NULL,
+    lc_amount DECIMAL(15, 2) NOT NULL DEFAULT 0.00,
+    latest_shipment_date DATE NOT NULL,
+    expiry_date DATE NOT NULL,
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP NULL DEFAULT NULL ON UPDATE CURRENT_TIMESTAMP,
+    created_by BIGINT UNSIGNED NULL,
+    updated_by BIGINT UNSIGNED NULL,
+    UNIQUE KEY uniq_file_lc_vendor_file (vendor_file_id),
+    CONSTRAINT fk_file_lc_file FOREIGN KEY (vendor_file_id) REFERENCES vendor_files(id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;

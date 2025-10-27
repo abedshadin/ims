@@ -27,6 +27,7 @@ document.addEventListener('DOMContentLoaded', () => {
     state.proformas = Array.isArray(state.proformas) ? state.proformas : [];
     state.vendorProducts = Array.isArray(state.vendorProducts) ? state.vendorProducts : [];
     state.file = state.file && typeof state.file === 'object' ? state.file : null;
+    state.lc = state.lc && typeof state.lc === 'object' ? state.lc : null;
 
     const piList = document.getElementById('piList');
     const noPiMessage = document.getElementById('noPiMessage');
@@ -47,6 +48,10 @@ document.addEventListener('DOMContentLoaded', () => {
     const previewFields = productPreview ? productPreview.querySelectorAll('[data-preview]') : [];
     const fileMetaCreated = document.getElementById('fileMetaCreated');
     const fileMetaUpdated = document.getElementById('fileMetaUpdated');
+    const lcForm = document.getElementById('lcForm');
+    const lcAlert = document.getElementById('lcAlert');
+    const lcSummary = document.getElementById('lcSummary');
+    const lcEmptyMessage = lcSummary ? lcSummary.querySelector('[data-lc-empty-message]') : null;
     let activePiToken = null;
     let productModalInstance = null;
 
@@ -72,6 +77,31 @@ document.addEventListener('DOMContentLoaded', () => {
 
         element.textContent = '';
         element.className = 'alert d-none';
+    };
+
+    const clearFormValidation = (form) => {
+        if (!form) {
+            return;
+        }
+
+        Array.from(form.elements).forEach((element) => {
+            if (element instanceof HTMLInputElement || element instanceof HTMLSelectElement || element instanceof HTMLTextAreaElement) {
+                element.classList.remove('is-invalid');
+            }
+        });
+    };
+
+    const applyFormErrors = (form, errors) => {
+        if (!form || !errors) {
+            return;
+        }
+
+        Object.entries(errors).forEach(([name]) => {
+            const field = form.elements[name];
+            if (field && field.classList) {
+                field.classList.add('is-invalid');
+            }
+        });
     };
 
     const parseNumber = (value) => {
@@ -155,6 +185,89 @@ document.addEventListener('DOMContentLoaded', () => {
                 fileMetaUpdated.textContent = updatedText;
             } else {
                 fileMetaUpdated.textContent = 'Not updated yet';
+            }
+        }
+    };
+
+    const getLcFieldElement = (name) => {
+        return lcSummary ? lcSummary.querySelector(`[data-lc-field="${name}"]`) : null;
+    };
+
+    const syncLcForm = (lc) => {
+        if (!lcForm) {
+            return;
+        }
+
+        const mappings = {
+            lc_number: 'lc_number',
+            lc_type: 'lc_type',
+            lc_date: 'lc_date',
+            lc_amount: 'lc_amount',
+            latest_shipment_date: 'latest_shipment_date',
+            expiry_date: 'expiry_date',
+        };
+
+        Object.entries(mappings).forEach(([key, fieldName]) => {
+            const field = lcForm.elements[fieldName];
+            if (!field) {
+                return;
+            }
+
+            const value = lc && typeof lc === 'object' ? (lc[key] || '') : '';
+            field.value = value;
+        });
+    };
+
+    const updateLcSummary = (lc) => {
+        state.lc = lc && typeof lc === 'object' ? lc : null;
+
+        const hasDetails = Boolean(
+            state.lc &&
+            (state.lc.lc_number || state.lc.lc_type || state.lc.lc_date)
+        );
+
+        const setFieldText = (name, value, fallback = '—') => {
+            const element = getLcFieldElement(name);
+            if (!element) {
+                return;
+            }
+
+            const display = value && value !== '' ? value : fallback;
+            element.textContent = display;
+        };
+
+        if (state.lc) {
+            setFieldText('lc_number', state.lc.lc_number, '—');
+            setFieldText('lc_type', state.lc.lc_type, '—');
+            setFieldText('lc_date_human', state.lc.lc_date_human || state.lc.lc_date, '—');
+            setFieldText('latest_shipment_date_human', state.lc.latest_shipment_date_human || state.lc.latest_shipment_date, '—');
+            setFieldText('expiry_date_human', state.lc.expiry_date_human || state.lc.expiry_date, '—');
+
+            const amountElement = getLcFieldElement('lc_amount');
+            if (amountElement) {
+                const amountValue = state.lc.lc_amount && state.lc.lc_amount !== ''
+                    ? toCurrency(state.lc.lc_amount)
+                    : toCurrency(state.lc.lc_amount_formatted || '0');
+                amountElement.textContent = `$${amountValue}`;
+            }
+        } else {
+            setFieldText('lc_number', '', '—');
+            setFieldText('lc_type', '', '—');
+            setFieldText('lc_date_human', '', '—');
+            setFieldText('latest_shipment_date_human', '', '—');
+            setFieldText('expiry_date_human', '', '—');
+
+            const amountElement = getLcFieldElement('lc_amount');
+            if (amountElement) {
+                amountElement.textContent = '$0.00';
+            }
+        }
+
+        if (lcEmptyMessage) {
+            if (hasDetails) {
+                lcEmptyMessage.classList.add('d-none');
+            } else {
+                lcEmptyMessage.classList.remove('d-none');
             }
         }
     };
@@ -576,6 +689,62 @@ document.addEventListener('DOMContentLoaded', () => {
     };
 
     const attachEventListeners = () => {
+        if (lcForm) {
+            lcForm.addEventListener('submit', async (event) => {
+                event.preventDefault();
+                resetAlert(lcAlert);
+                clearFormValidation(lcForm);
+
+                const submitButton = lcForm.querySelector('button[type="submit"]');
+                if (submitButton) {
+                    submitButton.disabled = true;
+                }
+
+                try {
+                    const formData = new FormData(lcForm);
+                    const response = await fetch('lc_store.php', {
+                        method: 'POST',
+                        body: formData,
+                    });
+
+                    if (response.status === 401) {
+                        window.location.reload();
+                        return;
+                    }
+
+                    let result;
+
+                    try {
+                        result = await response.json();
+                    } catch (error) {
+                        throw new Error('Unexpected response received.');
+                    }
+
+                    if (!response.ok || result.status !== 'success') {
+                        applyFormErrors(lcForm, result.errors || {});
+                        throw new Error(result.message || 'Unable to save the letter of credit details.');
+                    }
+
+                    if (result.lc) {
+                        updateLcSummary(result.lc);
+                        syncLcForm(result.lc);
+                    }
+
+                    if (result.file_meta) {
+                        updateFileMeta(result.file_meta);
+                    }
+
+                    showAlert(lcAlert, result.message || 'Letter of credit details saved successfully.', 'success');
+                } catch (error) {
+                    showAlert(lcAlert, error.message, 'danger');
+                } finally {
+                    if (submitButton) {
+                        submitButton.disabled = false;
+                    }
+                }
+            });
+        }
+
         if (createPiForm) {
             createPiForm.addEventListener('submit', async (event) => {
                 event.preventDefault();
@@ -870,6 +1039,8 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     populateVendorProductSelect();
+    updateLcSummary(state.lc);
+    syncLcForm(state.lc);
     refreshPiList();
     attachEventListeners();
 });
