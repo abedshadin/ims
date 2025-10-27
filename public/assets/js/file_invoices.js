@@ -172,16 +172,21 @@ document.addEventListener('DOMContentLoaded', () => {
         productPreview.classList.remove('d-none');
     };
 
-    const renderProductRow = (line, freightPerWeight) => {
+    const renderProductRow = (line, metrics) => {
         const product = line.product;
         const quantityDisplay = formatQuantity(line.quantity);
         const fobDisplay = toCurrency(line.fobTotal);
         const fobPerUnitDisplay = toCurrency(line.fobPerUnit || (line.quantity > 0 ? line.fobTotal / line.quantity : 0));
-        const cnfDisplay = toCurrency(line.cnf || 0);
-        const freightShareDisplay = toCurrency(freightPerWeight || 0);
+        const freightPerUnitDisplay = toCurrency(line.freightPerUnit || 0);
+        const freightShareDisplay = toCurrency(line.freightShare || 0);
+        const cnfPerUnitDisplay = toCurrency(line.cnfPerUnit || 0);
+        const cnfTotalDisplay = toCurrency(line.cnfTotal || 0);
         const totalWeightDisplay = formatWeight(line.lineWeight);
         const row = document.createElement('tr');
-        row.dataset.productToken = product.token || '';
+        const productToken = product.token || '';
+        const canDelete = productToken !== '';
+        row.dataset.productToken = productToken;
+        row.dataset.piToken = metrics.piToken || '';
         row.innerHTML = `
             <td>
                 <div class="fw-semibold">${escapeHtml(product.product_name || '')}</div>
@@ -213,8 +218,14 @@ document.addEventListener('DOMContentLoaded', () => {
                 <div class="text-muted small">FOB: $${escapeHtml(fobDisplay)}</div>
             </td>
             <td class="text-end">
-                <div class="fw-semibold">$${escapeHtml(cnfDisplay)}</div>
-                <div class="text-muted small">FOB/Unit $${escapeHtml(fobPerUnitDisplay)} + Freight/Wt $${escapeHtml(freightShareDisplay)}</div>
+                <div class="fw-semibold">C&amp;F Total $${escapeHtml(cnfTotalDisplay)}</div>
+                <div class="text-muted small">Per Unit $${escapeHtml(cnfPerUnitDisplay)} (FOB $${escapeHtml(fobPerUnitDisplay)} + Freight $${escapeHtml(freightPerUnitDisplay)})</div>
+                <div class="text-muted small">Freight Share $${escapeHtml(freightShareDisplay)}</div>
+            </td>
+            <td class="text-end">
+                ${canDelete
+                    ? `<button class="btn btn-outline-danger btn-sm" type="button" data-action="delete-product" data-pi-token="${escapeHtml(metrics.piToken || '')}" data-product-token="${escapeHtml(productToken)}">Remove</button>`
+                    : '<span class="text-muted small">Not removable</span>'}
             </td>
         `;
         return row;
@@ -226,6 +237,7 @@ document.addEventListener('DOMContentLoaded', () => {
         let totalWeight = 0;
         let totalFob = 0;
         let totalQuantity = 0;
+        let totalCnf = 0;
 
         products.forEach((product) => {
             const quantity = parseNumber(product.quantity);
@@ -251,8 +263,18 @@ document.addEventListener('DOMContentLoaded', () => {
 
         lines.forEach((line) => {
             const fobPerUnit = line.quantity > 0 ? line.fobTotal / line.quantity : 0;
+            const freightPerUnit = line.weightPerUnit * freightPerWeight;
+            const freightShare = freightPerUnit * line.quantity;
+            const cnfPerUnit = freightPerUnit + fobPerUnit;
+            const cnfTotal = cnfPerUnit * line.quantity;
+
             line.fobPerUnit = fobPerUnit;
-            line.cnf = freightPerWeight + fobPerUnit;
+            line.freightPerUnit = freightPerUnit;
+            line.freightShare = freightShare;
+            line.cnfPerUnit = cnfPerUnit;
+            line.cnfTotal = cnfTotal;
+
+            totalCnf += cnfTotal;
         });
 
         return {
@@ -262,6 +284,8 @@ document.addEventListener('DOMContentLoaded', () => {
             totalQuantity,
             totalFreight,
             freightPerWeight,
+            totalCnf,
+            piToken: proforma.token || '',
         };
     };
 
@@ -303,7 +327,8 @@ document.addEventListener('DOMContentLoaded', () => {
                                 <th scope="col" class="text-end">DEC &amp; HS</th>
                                 <th scope="col" class="text-end">Assesment</th>
                                 <th scope="col" class="text-end">Quantity &amp; FOB</th>
-                                <th scope="col" class="text-end">C&amp;F / Unit</th>
+                                <th scope="col" class="text-end">C&amp;F Summary</th>
+                                <th scope="col" class="text-end">Actions</th>
                             </tr>
                         </thead>
                         <tbody data-products-for="${escapeHtml(proforma.token || '')}"></tbody>
@@ -312,7 +337,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 <p class="text-muted small mt-3 ${metrics.lines.length ? 'd-none' : ''}" data-empty-state-for="${escapeHtml(proforma.token || '')}">
                     No products have been added to this proforma invoice yet.
                 </p>
-                <div class="row row-cols-1 row-cols-md-4 g-3 mt-3">
+                <div class="row row-cols-1 row-cols-md-2 row-cols-lg-5 g-3 mt-3">
                     <div class="col">
                         <div class="text-muted text-uppercase small">Freight</div>
                         <div class="fw-semibold">$${toCurrency(metrics.totalFreight)}</div>
@@ -329,6 +354,10 @@ document.addEventListener('DOMContentLoaded', () => {
                         <div class="text-muted text-uppercase small">Total FOB</div>
                         <div class="fw-semibold">$${toCurrency(metrics.totalFob)}</div>
                     </div>
+                    <div class="col">
+                        <div class="text-muted text-uppercase small">Total C&amp;F</div>
+                        <div class="fw-semibold">$${toCurrency(metrics.totalCnf)}</div>
+                    </div>
                 </div>
             </div>
         `;
@@ -337,7 +366,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         if (tbody && metrics.lines.length) {
             metrics.lines.forEach((line) => {
-                tbody.append(renderProductRow(line, metrics.freightPerWeight));
+                tbody.append(renderProductRow(line, metrics));
             });
         }
 
@@ -537,6 +566,66 @@ document.addEventListener('DOMContentLoaded', () => {
 
                         refreshPiList();
                         showAlert(piAlert, result.message || 'Freight updated.', 'success');
+                    } catch (error) {
+                        showAlert(piAlert, error.message, 'danger');
+                    } finally {
+                        actionButton.disabled = false;
+                        actionButton.innerHTML = originalText;
+                    }
+
+                    return;
+                }
+
+                if (action === 'delete-product') {
+                    const productToken = actionButton.getAttribute('data-product-token') || '';
+
+                    if (!productToken) {
+                        return;
+                    }
+
+                    if (!window.confirm('Remove this product from the proforma invoice?')) {
+                        return;
+                    }
+
+                    const originalText = actionButton.innerHTML;
+                    actionButton.disabled = true;
+                    actionButton.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>';
+
+                    try {
+                        resetAlert(piAlert);
+                        const formData = new FormData();
+                        formData.set('pi_token', piToken);
+                        formData.set('product_token', productToken);
+
+                        const response = await fetch('proforma_products_delete.php', {
+                            method: 'POST',
+                            body: formData,
+                        });
+
+                        if (response.status === 401) {
+                            window.location.reload();
+                            return;
+                        }
+
+                        let result;
+
+                        try {
+                            result = await response.json();
+                        } catch (error) {
+                            throw new Error('Unexpected response received.');
+                        }
+
+                        if (!response.ok || result.status !== 'success') {
+                            throw new Error(result.message || 'Unable to remove the product.');
+                        }
+
+                        const pi = state.proformas.find((item) => item.token === piToken);
+                        if (pi) {
+                            pi.products = (pi.products || []).filter((product) => product.token !== productToken);
+                        }
+
+                        refreshPiList();
+                        showAlert(piAlert, result.message || 'Product removed.', 'success');
                     } catch (error) {
                         showAlert(piAlert, error.message, 'danger');
                     } finally {
