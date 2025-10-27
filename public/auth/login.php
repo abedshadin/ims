@@ -12,9 +12,20 @@ if (isset($_GET['registered'])) {
     $successMessage = 'Registration successful. Please sign in.';
 }
 
-function resolveRedirect(string $target): string
+function sanitizeRedirectInput(mixed $target): string
 {
-    $target = trim($target);
+    if (!is_string($target)) {
+        return '';
+    }
+
+    $sanitized = preg_replace('/[\x00-\x1F\x7F]+/u', '', $target);
+
+    return $sanitized !== null ? trim($sanitized) : '';
+}
+
+function resolveRedirect(mixed $target): string
+{
+    $target = sanitizeRedirectInput($target);
 
     if ($target === '' || preg_match('/^https?:/i', $target) || str_starts_with($target, '//')) {
         return '../dashboard.php';
