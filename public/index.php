@@ -2,5 +2,5 @@
 
 declare(strict_types=1);
 
-header('Location: vendor/create.php');
+header('Location: ./auth/login.php');
 exit;
