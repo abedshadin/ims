@@ -26,6 +26,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const state = parseJson(dataElement);
     state.proformas = Array.isArray(state.proformas) ? state.proformas : [];
     state.vendorProducts = Array.isArray(state.vendorProducts) ? state.vendorProducts : [];
+    state.file = state.file && typeof state.file === 'object' ? state.file : null;
 
     const piList = document.getElementById('piList');
     const noPiMessage = document.getElementById('noPiMessage');
@@ -41,6 +42,8 @@ document.addEventListener('DOMContentLoaded', () => {
     const productAlertBox = document.getElementById('productFormAlert');
     const productPreview = document.getElementById('vendorProductPreview');
     const previewFields = productPreview ? productPreview.querySelectorAll('[data-preview]') : [];
+    const fileMetaCreated = document.getElementById('fileMetaCreated');
+    const fileMetaUpdated = document.getElementById('fileMetaUpdated');
     let activePiToken = null;
     let productModalInstance = null;
 
@@ -106,6 +109,51 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         return number.toFixed(3).replace(/\.0+$/, '').replace(/\.([0-9]*[1-9])0+$/, '.$1');
+    };
+
+    const updateFileMeta = (meta) => {
+        if (!meta) {
+            return;
+        }
+
+        state.file = {
+            ...(state.file || {}),
+            ...meta,
+        };
+
+        if (fileMetaCreated) {
+            const createdAt = state.file.created_at_human || '';
+            const createdBy = state.file.created_by_name || '';
+
+            if (createdAt) {
+                let createdText = `Created ${createdAt}`;
+
+                if (createdBy) {
+                    createdText += ` by ${createdBy}`;
+                }
+
+                fileMetaCreated.textContent = createdText;
+            } else {
+                fileMetaCreated.textContent = 'Created';
+            }
+        }
+
+        if (fileMetaUpdated) {
+            const updatedAt = state.file.updated_at_human || '';
+            const updatedBy = state.file.updated_by_name || '';
+
+            if (updatedAt) {
+                let updatedText = `Last updated ${updatedAt}`;
+
+                if (updatedBy) {
+                    updatedText += ` by ${updatedBy}`;
+                }
+
+                fileMetaUpdated.textContent = updatedText;
+            } else {
+                fileMetaUpdated.textContent = 'Not updated yet';
+            }
+        }
     };
 
     const populateVendorProductSelect = () => {
@@ -191,6 +239,9 @@ document.addEventListener('DOMContentLoaded', () => {
             <td>
                 <div class="fw-semibold">${escapeHtml(product.product_name || '')}</div>
                 <div class="text-muted small">${escapeHtml(product.brand || '')}</div>
+                ${canDelete
+                    ? `<div class="mt-2"><button class="btn btn-danger btn-sm" type="button" data-action="delete-product" data-pi-token="${escapeHtml(metrics.piToken || '')}" data-product-token="${escapeHtml(productToken)}">Remove Product</button></div>`
+                    : '<div class="mt-2 text-muted small">Not removable</div>'}
             </td>
             <td>
                 <div>${escapeHtml(product.product_category || '')}</div>
@@ -221,11 +272,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 <div class="fw-semibold">C&amp;F Total $${escapeHtml(cnfTotalDisplay)}</div>
                 <div class="text-muted small">Per Unit $${escapeHtml(cnfPerUnitDisplay)} (FOB $${escapeHtml(fobPerUnitDisplay)} + Freight $${escapeHtml(freightPerUnitDisplay)})</div>
                 <div class="text-muted small">Freight Share $${escapeHtml(freightShareDisplay)}</div>
-            </td>
-            <td class="text-end">
-                ${canDelete
-                    ? `<button class="btn btn-outline-danger btn-sm" type="button" data-action="delete-product" data-pi-token="${escapeHtml(metrics.piToken || '')}" data-product-token="${escapeHtml(productToken)}">Remove</button>`
-                    : '<span class="text-muted small">Not removable</span>'}
             </td>
         `;
         return row;
@@ -328,7 +374,6 @@ document.addEventListener('DOMContentLoaded', () => {
                                 <th scope="col" class="text-end">Assesment</th>
                                 <th scope="col" class="text-end">Quantity &amp; FOB</th>
                                 <th scope="col" class="text-end">C&amp;F Summary</th>
-                                <th scope="col" class="text-end">Actions</th>
                             </tr>
                         </thead>
                         <tbody data-products-for="${escapeHtml(proforma.token || '')}"></tbody>
@@ -487,6 +532,10 @@ document.addEventListener('DOMContentLoaded', () => {
                         createPiForm.reset();
                     }
 
+                    if (result.file_meta) {
+                        updateFileMeta(result.file_meta);
+                    }
+
                     showAlert(piAlert, result.message || 'Proforma invoice added.', 'success');
                 } catch (error) {
                     showAlert(piAlert, error.message, 'danger');
@@ -564,6 +613,10 @@ document.addEventListener('DOMContentLoaded', () => {
                             pi.freight_amount_formatted = result.freight_amount;
                         }
 
+                        if (result.file_meta) {
+                            updateFileMeta(result.file_meta);
+                        }
+
                         refreshPiList();
                         showAlert(piAlert, result.message || 'Freight updated.', 'success');
                     } catch (error) {
@@ -622,6 +675,10 @@ document.addEventListener('DOMContentLoaded', () => {
                         const pi = state.proformas.find((item) => item.token === piToken);
                         if (pi) {
                             pi.products = (pi.products || []).filter((product) => product.token !== productToken);
+                        }
+
+                        if (result.file_meta) {
+                            updateFileMeta(result.file_meta);
                         }
 
                         refreshPiList();
@@ -697,6 +754,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
                     refreshPiList();
 
+                    if (result.file_meta) {
+                        updateFileMeta(result.file_meta);
+                    }
+
                     if (productModalInstance) {
                         productModalInstance.hide();
                     }
@@ -710,6 +771,10 @@ document.addEventListener('DOMContentLoaded', () => {
             });
         }
     };
+
+    if (state.file) {
+        updateFileMeta(state.file);
+    }
 
     populateVendorProductSelect();
     refreshPiList();

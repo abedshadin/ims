@@ -5,6 +5,7 @@ declare(strict_types=1);
 require_once __DIR__ . '/../../app/Auth.php';
 require_once __DIR__ . '/../../app/Database.php';
 require_once __DIR__ . '/../../app/IdCipher.php';
+require_once __DIR__ . '/../../app/FileMetadata.php';
 
 header('Content-Type: application/json');
 
@@ -267,6 +268,14 @@ try {
 
     $invoiceProductId = (int) $pdo->lastInsertId();
 
+    $updateFileStatement = $pdo->prepare(
+        'UPDATE vendor_files SET updated_at = NOW(), updated_by = :updated_by WHERE id = :id'
+    );
+    $updateFileStatement->execute([
+        ':updated_by' => Auth::userId(),
+        ':id' => (int) $invoice['vendor_file_id'],
+    ]);
+
     $pdo->commit();
 
     try {
@@ -274,6 +283,8 @@ try {
     } catch (InvalidArgumentException|RuntimeException $exception) {
         $invoiceProductToken = null;
     }
+
+    $fileMeta = FileMetadata::load($pdo, (int) $invoice['vendor_file_id']);
 
     echo json_encode([
         'status' => 'success',
@@ -301,6 +312,7 @@ try {
             'fob_total_formatted' => number_format($fobTotal, 2),
         ],
         'new_vendor_product' => $newVendorProduct,
+        'file_meta' => $fileMeta,
     ]);
 } catch (PDOException $exception) {
     if (isset($pdo) && $pdo instanceof \PDO && $pdo->inTransaction()) {

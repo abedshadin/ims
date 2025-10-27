@@ -101,14 +101,18 @@ try {
             bank_name,
             brand,
             created_at,
-            created_by
+            created_by,
+            updated_at,
+            updated_by
         ) VALUES (
             :file_name,
             :vendor_id,
             :bank_name,
             :brand,
             NOW(),
-            :created_by
+            :created_by,
+            NOW(),
+            :updated_by
         )'
     );
 
@@ -118,6 +122,7 @@ try {
         ':bank_name' => $bankName,
         ':brand' => $brand,
         ':created_by' => Auth::userId(),
+        ':updated_by' => Auth::userId(),
     ]);
 
     $fileId = (int) $pdo->lastInsertId();

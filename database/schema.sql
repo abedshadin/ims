@@ -46,7 +46,9 @@ CREATE TABLE IF NOT EXISTS vendor_files (
     bank_name ENUM('DBBL', 'SCB', 'BBL') NOT NULL,
     brand ENUM('PH', 'KFC', 'PH/KFC') NOT NULL,
     created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP NULL DEFAULT NULL ON UPDATE CURRENT_TIMESTAMP,
     created_by BIGINT UNSIGNED NULL,
+    updated_by BIGINT UNSIGNED NULL,
     CONSTRAINT fk_vendor_files_vendor FOREIGN KEY (vendor_id) REFERENCES vendors(id) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 

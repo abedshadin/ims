@@ -5,6 +5,7 @@ declare(strict_types=1);
 require_once __DIR__ . '/../../app/Auth.php';
 require_once __DIR__ . '/../../app/Database.php';
 require_once __DIR__ . '/../../app/IdCipher.php';
+require_once __DIR__ . '/../../app/FileMetadata.php';
 
 header('Content-Type: application/json');
 
@@ -43,9 +44,10 @@ if ($piId === null || $productId === null) {
 
 try {
     $pdo = Database::getConnection();
+    $pdo->beginTransaction();
 
     $productStatement = $pdo->prepare(
-        'SELECT pip.id, pip.proforma_invoice_id
+        'SELECT pip.id, pip.proforma_invoice_id, pi.vendor_file_id
          FROM proforma_invoice_products pip
          INNER JOIN proforma_invoices pi ON pi.id = pip.proforma_invoice_id
          WHERE pip.id = :product_id AND pip.proforma_invoice_id = :pi_id'
@@ -57,6 +59,8 @@ try {
     $product = $productStatement->fetch();
 
     if (!$product) {
+        $pdo->rollBack();
+
         http_response_code(404);
         echo json_encode([
             'status' => 'error',
@@ -73,13 +77,30 @@ try {
         ':pi_id' => $piId,
     ]);
 
+    $updateFileStatement = $pdo->prepare(
+        'UPDATE vendor_files SET updated_at = NOW(), updated_by = :updated_by WHERE id = :id'
+    );
+    $updateFileStatement->execute([
+        ':updated_by' => Auth::userId(),
+        ':id' => (int) $product['vendor_file_id'],
+    ]);
+
+    $pdo->commit();
+
+    $fileMeta = FileMetadata::load($pdo, (int) $product['vendor_file_id']);
+
     echo json_encode([
         'status' => 'success',
         'message' => 'Product removed from the proforma invoice.',
         'product_token' => $productToken,
         'pi_token' => $piToken,
+        'file_meta' => $fileMeta,
     ]);
 } catch (PDOException $exception) {
+    if (isset($pdo) && $pdo instanceof \PDO && $pdo->inTransaction()) {
+        $pdo->rollBack();
+    }
+
     http_response_code(500);
     echo json_encode([
         'status' => 'error',

@@ -5,6 +5,7 @@ declare(strict_types=1);
 require_once __DIR__ . '/../../app/Auth.php';
 require_once __DIR__ . '/../../app/Database.php';
 require_once __DIR__ . '/../../app/IdCipher.php';
+require_once __DIR__ . '/../../app/FileMetadata.php';
 
 Auth::requireLogin('/auth/login.php');
 
@@ -27,25 +28,20 @@ if ($fileId === null) {
     try {
         $pdo = Database::getConnection();
 
-        $fileStatement = $pdo->prepare(
-            'SELECT vf.id, vf.file_name, vf.bank_name, vf.brand, vf.created_at, vf.vendor_id, v.vendor_name
-             FROM vendor_files vf
-             INNER JOIN vendors v ON v.id = vf.vendor_id
-             WHERE vf.id = :id'
-        );
-        $fileStatement->execute([':id' => $fileId]);
-        $file = $fileStatement->fetch();
+        $file = FileMetadata::load($pdo, $fileId);
 
-        if (!$file) {
+        if ($file === null) {
             $loadError = 'The requested file could not be found.';
         } else {
+            $vendorId = (int) $file['vendor_id'];
+
             $vendorProductsStatement = $pdo->prepare(
                 'SELECT id, product_name, brand, country_of_origin, product_category, product_size, unit, rate, item_weight, dec_unit_price, asses_unit_price, hs_code
                  FROM vendor_products
                  WHERE vendor_id = :vendor_id
                  ORDER BY product_name ASC'
             );
-            $vendorProductsStatement->execute([':vendor_id' => $file['vendor_id']]);
+            $vendorProductsStatement->execute([':vendor_id' => $vendorId]);
             $vendorProducts = $vendorProductsStatement->fetchAll() ?: [];
 
             $proformaStatement = $pdo->prepare(
@@ -146,12 +142,20 @@ if ($fileId === null) {
 
 $initialData = [
     'file' => $file ? [
-        'token' => $fileToken,
+        'token' => $file['token'] ?? $fileToken,
         'file_name' => (string) $file['file_name'],
         'vendor_name' => (string) $file['vendor_name'],
+        'vendor_id' => (int) $file['vendor_id'],
         'bank_name' => (string) $file['bank_name'],
         'brand' => (string) $file['brand'],
-        'created_at_human' => $file ? date('j M Y, g:i A', strtotime((string) $file['created_at'])) : '',
+        'created_at' => $file['created_at'] ?? null,
+        'created_at_human' => $file['created_at_human'] ?? '',
+        'created_by' => $file['created_by'] ?? null,
+        'created_by_name' => $file['created_by_name'] ?? null,
+        'updated_at' => $file['updated_at'] ?? null,
+        'updated_at_human' => $file['updated_at_human'] ?? null,
+        'updated_by' => $file['updated_by'] ?? null,
+        'updated_by_name' => $file['updated_by_name'] ?? null,
     ] : null,
     'vendorProducts' => array_values(array_filter(array_map(static function (array $product) {
         try {
@@ -180,6 +184,27 @@ try {
     $initialDataJson = json_encode($initialData, JSON_THROW_ON_ERROR);
 } catch (JsonException $exception) {
     $initialDataJson = json_encode(['file' => null, 'vendorProducts' => [], 'proformas' => []]);
+}
+
+$createdSummary = '';
+$updatedSummary = '';
+
+if ($file !== null) {
+    $createdSummary = trim('Created ' . ($file['created_at_human'] ?? ''));
+
+    if (!empty($file['created_by_name'])) {
+        $createdSummary = trim($createdSummary . ' by ' . $file['created_by_name']);
+    }
+
+    if (!empty($file['updated_at_human'])) {
+        $updatedSummary = 'Last updated ' . $file['updated_at_human'];
+
+        if (!empty($file['updated_by_name'])) {
+            $updatedSummary .= ' by ' . $file['updated_by_name'];
+        }
+    } else {
+        $updatedSummary = 'Not updated yet';
+    }
 }
 ?>
 <!DOCTYPE html>
@@ -221,7 +246,8 @@ try {
                         <p class="text-muted mb-0">Bank: <span class="fw-semibold"><?php echo e($file['bank_name']); ?></span> &middot; Brand: <span class="fw-semibold"><?php echo e($file['brand']); ?></span></p>
                     </div>
                     <div class="text-lg-end text-muted">
-                        <div class="small">Created <?php echo e(date('j M Y, g:i A', strtotime((string) $file['created_at']))); ?></div>
+                        <div class="small" id="fileMetaCreated"><?php echo e($createdSummary); ?></div>
+                        <div class="small mt-1" id="fileMetaUpdated"><?php echo e($updatedSummary); ?></div>
                     </div>
                 </div>
             </div>

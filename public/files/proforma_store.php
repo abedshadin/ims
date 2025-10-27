@@ -5,6 +5,7 @@ declare(strict_types=1);
 require_once __DIR__ . '/../../app/Auth.php';
 require_once __DIR__ . '/../../app/Database.php';
 require_once __DIR__ . '/../../app/IdCipher.php';
+require_once __DIR__ . '/../../app/FileMetadata.php';
 
 header('Content-Type: application/json');
 
@@ -76,12 +77,11 @@ try {
     $pdo = Database::getConnection();
 
     $fileStatement = $pdo->prepare(
-        'SELECT id, vendor_id FROM vendor_files WHERE id = :id'
+        'SELECT id FROM vendor_files WHERE id = :id'
     );
     $fileStatement->execute([':id' => $fileId]);
-    $file = $fileStatement->fetch();
 
-    if (!$file) {
+    if (!$fileStatement->fetch()) {
         http_response_code(404);
         echo json_encode([
             'status' => 'error',
@@ -90,9 +90,11 @@ try {
         exit;
     }
 
+    $pdo->beginTransaction();
+
     $insertStatement = $pdo->prepare(
-        'INSERT INTO proforma_invoices (vendor_file_id, invoice_number, freight_amount, created_at, created_by)
-         VALUES (:vendor_file_id, :invoice_number, :freight_amount, NOW(), :created_by)'
+        'INSERT INTO proforma_invoices (vendor_file_id, invoice_number, freight_amount, created_at, created_by) '
+        . 'VALUES (:vendor_file_id, :invoice_number, :freight_amount, NOW(), :created_by)'
     );
     $insertStatement->execute([
         ':vendor_file_id' => $fileId,
@@ -103,13 +105,30 @@ try {
 
     $piId = (int) $pdo->lastInsertId();
 
+    $updateFileStatement = $pdo->prepare(
+        'UPDATE vendor_files SET updated_at = NOW(), updated_by = :updated_by WHERE id = :id'
+    );
+    $updateFileStatement->execute([
+        ':updated_by' => Auth::userId(),
+        ':id' => $fileId,
+    ]);
+
+    $pdo->commit();
+
+    $createdAtStatement = $pdo->prepare(
+        'SELECT created_at FROM proforma_invoices WHERE id = :id'
+    );
+    $createdAtStatement->execute([':id' => $piId]);
+    $createdAtRow = $createdAtStatement->fetch();
+    $createdAt = $createdAtRow ? (string) $createdAtRow['created_at'] : date('Y-m-d H:i:s');
+
     try {
         $piToken = IdCipher::encode($piId);
     } catch (InvalidArgumentException|RuntimeException $exception) {
         $piToken = null;
     }
 
-    $createdAt = date('Y-m-d H:i:s');
+    $fileMeta = FileMetadata::load($pdo, $fileId);
 
     echo json_encode([
         'status' => 'success',
@@ -122,8 +141,13 @@ try {
             'created_at_human' => date('j M Y, g:i A', strtotime($createdAt)),
             'products' => [],
         ],
+        'file_meta' => $fileMeta,
     ]);
 } catch (PDOException $exception) {
+    if (isset($pdo) && $pdo instanceof \PDO && $pdo->inTransaction()) {
+        $pdo->rollBack();
+    }
+
     http_response_code(500);
     echo json_encode([
         'status' => 'error',
