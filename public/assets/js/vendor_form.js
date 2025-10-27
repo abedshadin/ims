@@ -24,6 +24,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const endpoint = form.dataset.endpoint || form.getAttribute('action') || 'store.php';
         const redirectTarget = form.dataset.redirect || '';
         const resetOnSuccess = form.dataset.resetOnSuccess !== 'false';
+        const openFileUrl = form.dataset.openFileUrl || '';
         const autoFileInput = form.querySelector('[data-auto-file-name]');
 
         resetAlert();
@@ -64,6 +65,16 @@ document.addEventListener('DOMContentLoaded', () => {
 
             if (redirectTarget) {
                 window.location.href = redirectTarget;
+                return;
+            }
+
+            if (typeof result.redirect === 'string' && result.redirect.length > 0) {
+                window.location.href = result.redirect;
+                return;
+            }
+
+            if (openFileUrl && typeof result.file_token === 'string' && result.file_token.length > 0) {
+                window.location.href = `${openFileUrl}${encodeURIComponent(result.file_token)}`;
                 return;
             }
 

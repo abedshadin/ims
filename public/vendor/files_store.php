@@ -120,15 +120,26 @@ try {
         ':created_by' => Auth::userId(),
     ]);
 
+    $fileId = (int) $pdo->lastInsertId();
+
     $pdo->commit();
 
     $nextFileName = FileReference::next($pdo);
+
+    $fileToken = null;
+
+    try {
+        $fileToken = IdCipher::encode($fileId);
+    } catch (InvalidArgumentException|RuntimeException $exception) {
+        $fileToken = null;
+    }
 
     echo json_encode([
         'status' => 'success',
         'message' => 'File created successfully.',
         'file_name' => $fileName,
         'next_file_name' => $nextFileName,
+        'file_token' => $fileToken,
     ]);
 } catch (PDOException $exception) {
     if ($pdo instanceof \PDO && $pdo->inTransaction()) {

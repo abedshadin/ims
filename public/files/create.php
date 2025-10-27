@@ -76,7 +76,7 @@ try {
                         <h2 class="h4 mt-3 mb-1">File Details</h2>
                         <p class="text-muted mb-0">All fields are required to create a new file.</p>
                     </div>
-                    <form id="vendorForm" method="post" data-endpoint="../vendor/files_store.php" data-reset-on-success="true" novalidate>
+                    <form id="vendorForm" method="post" data-endpoint="../vendor/files_store.php" data-reset-on-success="true" data-open-file-url="show.php?file=" novalidate>
                         <div class="row g-4">
                             <div class="col-12">
                                 <label class="form-label text-uppercase small fw-semibold" for="file_name">File Name</label>
