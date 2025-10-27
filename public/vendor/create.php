@@ -1,5 +1,12 @@
 <?php
-session_start();
+
+declare(strict_types=1);
+
+require_once __DIR__ . '/../../app/Auth.php';
+
+Auth::requireLogin('/auth/login.php');
+
+$currentUserName = Auth::userName();
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -13,6 +20,22 @@ session_start();
 </head>
 <body>
 <div class="container py-5">
+    <div class="d-flex justify-content-between align-items-start mb-4">
+        <div>
+            <a class="btn btn-link px-0" href="../dashboard.php">&larr; Back to Dashboard</a>
+            <div class="btn-group mt-2" role="group" aria-label="Vendor shortcuts">
+                <a class="btn btn-outline-primary btn-sm" href="../vendor/index.php">Vendor List</a>
+                <a class="btn btn-outline-primary btn-sm" href="../files/create.php">Create File</a>
+                <a class="btn btn-outline-primary btn-sm" href="../files/index.php">File List</a>
+            </div>
+        </div>
+        <div class="text-end">
+            <?php if ($currentUserName): ?>
+                <div class="fw-semibold">Signed in as <?php echo htmlspecialchars($currentUserName, ENT_QUOTES, 'UTF-8'); ?></div>
+            <?php endif; ?>
+            <a class="btn btn-outline-secondary btn-sm mt-2" href="../auth/logout.php?redirect=<?php echo urlencode($_SERVER['REQUEST_URI'] ?? '/vendor/create.php'); ?>">Sign Out</a>
+        </div>
+    </div>
     <div class="row justify-content-center">
         <div class="col-lg-8">
             <div class="card shadow-sm">
