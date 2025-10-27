@@ -19,3 +19,22 @@ CREATE TABLE IF NOT EXISTS vendors (
     created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
     created_by BIGINT UNSIGNED NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS vendor_products (
+    id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    vendor_id BIGINT UNSIGNED NOT NULL,
+    product_name VARCHAR(255) NOT NULL,
+    brand VARCHAR(50) NOT NULL,
+    country_of_origin VARCHAR(100) NOT NULL,
+    product_category VARCHAR(50) NOT NULL,
+    product_size VARCHAR(100) NOT NULL,
+    unit VARCHAR(50) NOT NULL,
+    rate DECIMAL(15, 2) NOT NULL,
+    item_weight VARCHAR(100) NOT NULL,
+    dec_unit_price DECIMAL(15, 2) NOT NULL,
+    asses_unit_price DECIMAL(15, 2) NOT NULL,
+    hs_code VARCHAR(100) NOT NULL,
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP NULL DEFAULT NULL ON UPDATE CURRENT_TIMESTAMP,
+    CONSTRAINT fk_vendor_products_vendor FOREIGN KEY (vendor_id) REFERENCES vendors(id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;

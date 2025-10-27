@@ -1,6 +1,6 @@
 document.addEventListener('DOMContentLoaded', () => {
-    const form = document.getElementById('vendorForm');
-    const alertBox = document.getElementById('formAlert');
+    const form = document.getElementById('productForm');
+    const alertBox = document.getElementById('productFormAlert');
 
     if (!form || !alertBox) {
         return;
@@ -20,12 +20,20 @@ document.addEventListener('DOMContentLoaded', () => {
         event.preventDefault();
 
         const submitButton = form.querySelector('[type="submit"]');
-        const formData = new FormData(form);
-        const endpoint = form.dataset.endpoint || form.getAttribute('action') || 'store.php';
+        const endpoint = form.dataset.endpoint || form.getAttribute('action') || 'products_store.php';
         const redirectTarget = form.dataset.redirect || '';
         const resetOnSuccess = form.dataset.resetOnSuccess !== 'false';
+        const formData = new FormData(form);
 
         resetAlert();
+
+        if (!form.checkValidity()) {
+            form.classList.add('was-validated');
+            showAlert('Please fill in all required fields before submitting.', 'warning');
+            return;
+        }
+
+        form.classList.remove('was-validated');
 
         try {
             submitButton.disabled = true;
@@ -50,7 +58,7 @@ document.addEventListener('DOMContentLoaded', () => {
             }
 
             if (!response.ok || result.status !== 'success') {
-                throw new Error(result.message || 'Unable to save vendor information.');
+                throw new Error(result.message || 'Unable to save product information.');
             }
 
             showAlert(result.message, 'success');
@@ -69,10 +77,14 @@ document.addEventListener('DOMContentLoaded', () => {
             submitButton.disabled = false;
         }
     });
-    
+
     form.addEventListener('input', () => {
         if (!alertBox.classList.contains('d-none')) {
             resetAlert();
+        }
+
+        if (form.classList.contains('was-validated')) {
+            form.classList.remove('was-validated');
         }
     });
 });

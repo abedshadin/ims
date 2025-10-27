@@ -78,6 +78,7 @@ function formatDate(?string $value): string
                                 <th scope="col">Beneficiary Bank</th>
                                 <th scope="col">Created</th>
                                 <th scope="col">Created By</th>
+                                <th scope="col" class="text-end">Actions</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -92,6 +93,12 @@ function formatDate(?string $value): string
                                     </td>
                                     <td><?php echo e(formatDate($vendor['created_at'])); ?></td>
                                     <td><?php echo e($vendor['created_by_name'] ?? '—'); ?></td>
+                                    <td class="text-end">
+                                        <div class="d-flex justify-content-end gap-2">
+                                            <a class="btn btn-outline-primary btn-sm" href="edit.php?id=<?php echo urlencode((string) $vendor['id']); ?>">Edit Info</a>
+                                            <a class="btn btn-outline-secondary btn-sm" href="products.php?vendor_id=<?php echo urlencode((string) $vendor['id']); ?>">Add Products</a>
+                                        </div>
+                                    </td>
                                 </tr>
                             <?php endforeach; ?>
                         </tbody>
