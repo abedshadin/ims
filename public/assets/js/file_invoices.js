@@ -68,13 +68,44 @@ document.addEventListener('DOMContentLoaded', () => {
         element.className = 'alert d-none';
     };
 
-    const toCurrency = (value) => {
-        const number = Number.parseFloat(value);
-        if (Number.isNaN(number)) {
-            return value;
+    const parseNumber = (value) => {
+        if (typeof value === 'number') {
+            return Number.isFinite(value) ? value : 0;
         }
 
-        return number.toFixed(2);
+        if (value === null || value === undefined) {
+            return 0;
+        }
+
+        const sanitised = String(value).replace(/[^0-9+\-.,]/g, '').replace(/,/g, '');
+        const parsed = Number.parseFloat(sanitised);
+
+        return Number.isNaN(parsed) ? 0 : parsed;
+    };
+
+    const toCurrency = (value) => {
+        return parseNumber(value).toFixed(2);
+    };
+
+    const formatQuantity = (value) => {
+        const number = parseNumber(value);
+
+        if (!Number.isFinite(number) || number === 0) {
+            return '0';
+        }
+
+        const fixed = number.toFixed(3);
+        return fixed.replace(/\.0+$/, '').replace(/\.([0-9]*[1-9])0+$/, '.$1');
+    };
+
+    const formatWeight = (value) => {
+        const number = parseNumber(value);
+
+        if (!Number.isFinite(number) || number === 0) {
+            return '0';
+        }
+
+        return number.toFixed(3).replace(/\.0+$/, '').replace(/\.([0-9]*[1-9])0+$/, '.$1');
     };
 
     const populateVendorProductSelect = () => {
@@ -141,7 +172,14 @@ document.addEventListener('DOMContentLoaded', () => {
         productPreview.classList.remove('d-none');
     };
 
-    const renderProductRow = (product) => {
+    const renderProductRow = (line, freightPerWeight) => {
+        const product = line.product;
+        const quantityDisplay = formatQuantity(line.quantity);
+        const fobDisplay = toCurrency(line.fobTotal);
+        const fobPerUnitDisplay = toCurrency(line.fobPerUnit || (line.quantity > 0 ? line.fobTotal / line.quantity : 0));
+        const cnfDisplay = toCurrency(line.cnf || 0);
+        const freightShareDisplay = toCurrency(freightPerWeight || 0);
+        const totalWeightDisplay = formatWeight(line.lineWeight);
         const row = document.createElement('tr');
         row.dataset.productToken = product.token || '';
         row.innerHTML = `
@@ -156,6 +194,8 @@ document.addEventListener('DOMContentLoaded', () => {
             <td>
                 <div>${escapeHtml(product.product_size || '')}</div>
                 <div class="text-muted small">Unit: ${escapeHtml(product.unit || '')}</div>
+                <div class="text-muted small">Unit Wt: ${escapeHtml(product.item_weight || '')}</div>
+                <div class="text-muted small">Total Wt: ${escapeHtml(totalWeightDisplay)}</div>
             </td>
             <td class="text-end">
                 <div class="fw-semibold">$${escapeHtml(product.rate_formatted || toCurrency(product.rate || '0'))}</div>
@@ -168,11 +208,65 @@ document.addEventListener('DOMContentLoaded', () => {
             <td class="text-end">
                 <div>$${escapeHtml(product.asses_unit_price_formatted || toCurrency(product.asses_unit_price || '0'))}</div>
             </td>
+            <td class="text-end">
+                <div class="fw-semibold">${escapeHtml(quantityDisplay)}</div>
+                <div class="text-muted small">FOB: $${escapeHtml(fobDisplay)}</div>
+            </td>
+            <td class="text-end">
+                <div class="fw-semibold">$${escapeHtml(cnfDisplay)}</div>
+                <div class="text-muted small">FOB/Unit $${escapeHtml(fobPerUnitDisplay)} + Freight/Wt $${escapeHtml(freightShareDisplay)}</div>
+            </td>
         `;
         return row;
     };
 
+    const calculateProformaMetrics = (proforma) => {
+        const products = Array.isArray(proforma.products) ? proforma.products : [];
+        const lines = [];
+        let totalWeight = 0;
+        let totalFob = 0;
+        let totalQuantity = 0;
+
+        products.forEach((product) => {
+            const quantity = parseNumber(product.quantity);
+            const fobTotal = parseNumber(product.fob_total);
+            const weightPerUnit = parseNumber(product.item_weight);
+            const lineWeight = weightPerUnit * quantity;
+
+            totalWeight += lineWeight;
+            totalFob += fobTotal;
+            totalQuantity += quantity;
+
+            lines.push({
+                product,
+                quantity,
+                fobTotal,
+                weightPerUnit,
+                lineWeight,
+            });
+        });
+
+        const totalFreight = parseNumber(proforma.freight_amount);
+        const freightPerWeight = totalWeight > 0 ? totalFreight / totalWeight : 0;
+
+        lines.forEach((line) => {
+            const fobPerUnit = line.quantity > 0 ? line.fobTotal / line.quantity : 0;
+            line.fobPerUnit = fobPerUnit;
+            line.cnf = freightPerWeight + fobPerUnit;
+        });
+
+        return {
+            lines,
+            totalWeight,
+            totalFob,
+            totalQuantity,
+            totalFreight,
+            freightPerWeight,
+        };
+    };
+
     const renderProformaCard = (proforma) => {
+        const metrics = calculateProformaMetrics(proforma);
         const card = document.createElement('div');
         card.className = 'card shadow-sm border-0 mb-4';
         card.dataset.piToken = proforma.token || '';
@@ -181,12 +275,18 @@ document.addEventListener('DOMContentLoaded', () => {
 
         card.innerHTML = `
             <div class="card-body p-4">
-                <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3">
+                <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-start gap-3">
                     <div>
                         <h3 class="h5 mb-1">Proforma Invoice ${escapeHtml(proforma.invoice_number || '')}</h3>
-                        <p class="text-muted small mb-0">Created ${escapeHtml(createdAt)}</p>
+                        <p class="text-muted small mb-2">Created ${escapeHtml(createdAt)}</p>
+                        <div class="input-group input-group-sm" style="max-width: 22rem;">
+                            <span class="input-group-text">$</span>
+                            <input class="form-control" type="number" step="0.01" value="${escapeHtml(toCurrency(proforma.freight_amount || metrics.totalFreight || 0))}" data-freight-input>
+                            <button class="btn btn-outline-primary" type="button" data-action="save-freight" data-pi-token="${escapeHtml(proforma.token || '')}">Save Freight</button>
+                        </div>
+                        <div class="text-muted small mt-1">Freight is distributed by total weight for C&amp;F.</div>
                     </div>
-                    <div class="d-flex gap-2">
+                    <div class="d-flex gap-2 align-items-start">
                         <button class="btn btn-primary" type="button" data-action="add-product" data-pi-token="${escapeHtml(proforma.token || '')}">
                             Add Product
                         </button>
@@ -202,22 +302,42 @@ document.addEventListener('DOMContentLoaded', () => {
                                 <th scope="col" class="text-end">Unit Rate</th>
                                 <th scope="col" class="text-end">DEC &amp; HS</th>
                                 <th scope="col" class="text-end">Assesment</th>
+                                <th scope="col" class="text-end">Quantity &amp; FOB</th>
+                                <th scope="col" class="text-end">C&amp;F / Unit</th>
                             </tr>
                         </thead>
                         <tbody data-products-for="${escapeHtml(proforma.token || '')}"></tbody>
                     </table>
                 </div>
-                <p class="text-muted small mt-3 ${proforma.products && proforma.products.length ? 'd-none' : ''}" data-empty-state-for="${escapeHtml(proforma.token || '')}">
+                <p class="text-muted small mt-3 ${metrics.lines.length ? 'd-none' : ''}" data-empty-state-for="${escapeHtml(proforma.token || '')}">
                     No products have been added to this proforma invoice yet.
                 </p>
+                <div class="row row-cols-1 row-cols-md-4 g-3 mt-3">
+                    <div class="col">
+                        <div class="text-muted text-uppercase small">Freight</div>
+                        <div class="fw-semibold">$${toCurrency(metrics.totalFreight)}</div>
+                    </div>
+                    <div class="col">
+                        <div class="text-muted text-uppercase small">Total Weight</div>
+                        <div class="fw-semibold">${formatWeight(metrics.totalWeight)}</div>
+                    </div>
+                    <div class="col">
+                        <div class="text-muted text-uppercase small">Freight / Weight</div>
+                        <div class="fw-semibold">$${toCurrency(metrics.freightPerWeight)}</div>
+                    </div>
+                    <div class="col">
+                        <div class="text-muted text-uppercase small">Total FOB</div>
+                        <div class="fw-semibold">$${toCurrency(metrics.totalFob)}</div>
+                    </div>
+                </div>
             </div>
         `;
 
         const tbody = card.querySelector(`[data-products-for="${escapeSelector(proforma.token || '')}"]`);
 
-        if (tbody && Array.isArray(proforma.products)) {
-            proforma.products.forEach((product) => {
-                tbody.append(renderProductRow(product));
+        if (tbody && metrics.lines.length) {
+            metrics.lines.forEach((line) => {
+                tbody.append(renderProductRow(line, metrics.freightPerWeight));
             });
         }
 
@@ -350,15 +470,79 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         if (piList) {
-            piList.addEventListener('click', (event) => {
-                const button = event.target.closest('[data-action="add-product"]');
-                if (!button) {
+            piList.addEventListener('click', async (event) => {
+                const actionButton = event.target.closest('[data-action]');
+
+                if (!actionButton) {
                     return;
                 }
 
-                const piToken = button.getAttribute('data-pi-token') || '';
-                if (piToken) {
+                const action = actionButton.getAttribute('data-action');
+                const piToken = actionButton.getAttribute('data-pi-token') || '';
+
+                if (!piToken) {
+                    return;
+                }
+
+                if (action === 'add-product') {
                     openProductModal(piToken);
+                    return;
+                }
+
+                if (action === 'save-freight') {
+                    const card = actionButton.closest('[data-pi-token]');
+                    const input = card ? card.querySelector('[data-freight-input]') : null;
+
+                    if (!input) {
+                        return;
+                    }
+
+                    const originalText = actionButton.innerHTML;
+                    actionButton.disabled = true;
+                    actionButton.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>';
+
+                    try {
+                        resetAlert(piAlert);
+                        const formData = new FormData();
+                        formData.set('pi_token', piToken);
+                        formData.set('freight_amount', input.value || '');
+
+                        const response = await fetch('proforma_freight_update.php', {
+                            method: 'POST',
+                            body: formData,
+                        });
+
+                        if (response.status === 401) {
+                            window.location.reload();
+                            return;
+                        }
+
+                        let result;
+
+                        try {
+                            result = await response.json();
+                        } catch (error) {
+                            throw new Error('Unexpected response received.');
+                        }
+
+                        if (!response.ok || result.status !== 'success') {
+                            throw new Error(result.message || 'Unable to update freight.');
+                        }
+
+                        const pi = state.proformas.find((item) => item.token === piToken);
+                        if (pi) {
+                            pi.freight_amount = result.freight_amount;
+                            pi.freight_amount_formatted = result.freight_amount;
+                        }
+
+                        refreshPiList();
+                        showAlert(piAlert, result.message || 'Freight updated.', 'success');
+                    } catch (error) {
+                        showAlert(piAlert, error.message, 'danger');
+                    } finally {
+                        actionButton.disabled = false;
+                        actionButton.innerHTML = originalText;
+                    }
                 }
             });
         }
@@ -420,18 +604,9 @@ document.addEventListener('DOMContentLoaded', () => {
                     if (pi && result.product) {
                         pi.products = Array.isArray(pi.products) ? pi.products : [];
                         pi.products.push(result.product);
-
-                        const tbody = document.querySelector(`[data-products-for="${escapeSelector(activePiToken)}"]`);
-                        const emptyState = document.querySelector(`[data-empty-state-for="${escapeSelector(activePiToken)}"]`);
-
-                        if (tbody) {
-                            tbody.append(renderProductRow(result.product));
-                        }
-
-                        if (emptyState) {
-                            emptyState.classList.add('d-none');
-                        }
                     }
+
+                    refreshPiList();
 
                     if (productModalInstance) {
                         productModalInstance.hide();

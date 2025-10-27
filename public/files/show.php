@@ -49,7 +49,7 @@ if ($fileId === null) {
             $vendorProducts = $vendorProductsStatement->fetchAll() ?: [];
 
             $proformaStatement = $pdo->prepare(
-                'SELECT id, invoice_number, created_at
+                'SELECT id, invoice_number, freight_amount, created_at
                  FROM proforma_invoices
                  WHERE vendor_file_id = :file_id
                  ORDER BY created_at DESC, id DESC'
@@ -62,7 +62,7 @@ if ($fileId === null) {
                 $placeholders = implode(',', array_fill(0, count($proformaIds), '?'));
 
                 $productsStatement = $pdo->prepare(
-                    "SELECT id, proforma_invoice_id, vendor_product_id, product_name, brand, country_of_origin, product_category, product_size, unit, rate, item_weight, dec_unit_price, asses_unit_price, hs_code, created_at
+                    "SELECT id, proforma_invoice_id, vendor_product_id, product_name, brand, country_of_origin, product_category, product_size, unit, rate, item_weight, dec_unit_price, asses_unit_price, hs_code, quantity, fob_total, created_at
                      FROM proforma_invoice_products
                      WHERE proforma_invoice_id IN ($placeholders)
                      ORDER BY created_at ASC, id ASC"
@@ -120,6 +120,10 @@ if ($fileId === null) {
                         'asses_unit_price' => (string) $productRow['asses_unit_price'],
                         'asses_unit_price_formatted' => number_format((float) $productRow['asses_unit_price'], 2),
                         'hs_code' => (string) $productRow['hs_code'],
+                        'quantity' => number_format((float) $productRow['quantity'], 3, '.', ''),
+                        'quantity_formatted' => rtrim(rtrim(number_format((float) $productRow['quantity'], 3, '.', ''), '0'), '.') ?: '0',
+                        'fob_total' => number_format((float) $productRow['fob_total'], 2, '.', ''),
+                        'fob_total_formatted' => number_format((float) $productRow['fob_total'], 2),
                         'created_at' => (string) $productRow['created_at'],
                     ];
                 }
@@ -127,6 +131,8 @@ if ($fileId === null) {
                 $proformas[] = [
                     'token' => $encodedId,
                     'invoice_number' => (string) $row['invoice_number'],
+                    'freight_amount' => number_format((float) $row['freight_amount'], 2, '.', ''),
+                    'freight_amount_formatted' => number_format((float) $row['freight_amount'], 2),
                     'created_at' => (string) $row['created_at'],
                     'created_at_human' => date('j M Y, g:i A', strtotime((string) $row['created_at'])),
                     'products' => $products,
@@ -231,9 +237,16 @@ try {
                 </div>
                 <form id="createPiForm" class="row gy-3 mt-3" method="post" novalidate>
                     <input type="hidden" name="file_token" value="<?php echo e($fileToken); ?>">
-                    <div class="col-lg-8">
+                    <div class="col-lg-5">
                         <label class="form-label text-uppercase small fw-semibold" for="invoice_number">Proforma Invoice Number</label>
                         <input class="form-control form-control-lg" type="text" id="invoice_number" name="invoice_number" placeholder="e.g. PI-2025-001" required>
+                    </div>
+                    <div class="col-lg-3">
+                        <label class="form-label text-uppercase small fw-semibold" for="freight_amount">Freight Amount</label>
+                        <div class="input-group input-group-lg">
+                            <span class="input-group-text">$</span>
+                            <input class="form-control" type="number" step="0.01" id="freight_amount" name="freight_amount" placeholder="0.00">
+                        </div>
                     </div>
                     <div class="col-lg-4 d-flex align-items-end justify-content-lg-end">
                         <button class="btn btn-primary btn-lg w-100 w-lg-auto" type="submit">Add Proforma Invoice</button>
@@ -374,6 +387,21 @@ try {
                                     </div>
                                 </div>
                             </div>
+
+                            <div class="row g-3 mt-1">
+                                <div class="col-md-6">
+                                    <label class="form-label fw-semibold" for="quantity">Quantity</label>
+                                    <input class="form-control" type="number" step="0.001" min="0.001" id="quantity" name="quantity" placeholder="e.g. 100" required>
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label fw-semibold" for="fob_total">FOB Total</label>
+                                    <div class="input-group">
+                                        <span class="input-group-text">$</span>
+                                        <input class="form-control" type="number" step="0.01" min="0" id="fob_total" name="fob_total" placeholder="0.00" required>
+                                    </div>
+                                </div>
+                            </div>
+                            <p class="text-muted small mt-1">Quantity and FOB totals feed the C&amp;F calculation for this invoice.</p>
 
                             <div id="productFormAlert" class="alert d-none mt-4" role="alert"></div>
                         </form>

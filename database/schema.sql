@@ -54,6 +54,7 @@ CREATE TABLE IF NOT EXISTS proforma_invoices (
     id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
     vendor_file_id BIGINT UNSIGNED NOT NULL,
     invoice_number VARCHAR(100) NOT NULL,
+    freight_amount DECIMAL(15, 2) NOT NULL DEFAULT 0.00,
     created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
     created_by BIGINT UNSIGNED NULL,
     CONSTRAINT fk_proforma_invoices_file FOREIGN KEY (vendor_file_id) REFERENCES vendor_files(id) ON DELETE CASCADE
@@ -74,6 +75,8 @@ CREATE TABLE IF NOT EXISTS proforma_invoice_products (
     dec_unit_price DECIMAL(15, 2) NOT NULL,
     asses_unit_price DECIMAL(15, 2) NOT NULL,
     hs_code VARCHAR(100) NOT NULL,
+    quantity DECIMAL(15, 3) NOT NULL DEFAULT 0,
+    fob_total DECIMAL(15, 2) NOT NULL DEFAULT 0.00,
     created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
     CONSTRAINT fk_invoice_products_invoice FOREIGN KEY (proforma_invoice_id) REFERENCES proforma_invoices(id) ON DELETE CASCADE,
     CONSTRAINT fk_invoice_products_vendor_product FOREIGN KEY (vendor_product_id) REFERENCES vendor_products(id) ON DELETE SET NULL

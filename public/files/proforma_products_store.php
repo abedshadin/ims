@@ -29,6 +29,8 @@ if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
 $piToken = trim($_POST['pi_token'] ?? '');
 $productMode = $_POST['product_mode'] ?? 'existing';
 $vendorProductToken = trim($_POST['vendor_product_id'] ?? '');
+$quantityRaw = trim($_POST['quantity'] ?? '');
+$fobTotalRaw = trim($_POST['fob_total'] ?? '');
 
 if ($piToken === '' || ($piId = IdCipher::decode($piToken)) === null) {
     http_response_code(422);
@@ -61,6 +63,45 @@ try {
     }
 
     $vendorId = (int) $invoice['vendor_id'];
+
+    if ($quantityRaw === '' || $fobTotalRaw === '') {
+        http_response_code(422);
+        echo json_encode([
+            'status' => 'error',
+            'message' => 'Quantity and FOB total are required for each product.',
+        ]);
+        exit;
+    }
+
+    if (!is_numeric($quantityRaw) || !is_numeric($fobTotalRaw)) {
+        http_response_code(422);
+        echo json_encode([
+            'status' => 'error',
+            'message' => 'Quantity and FOB total must be numeric values.',
+        ]);
+        exit;
+    }
+
+    $quantity = (float) $quantityRaw;
+    $fobTotal = (float) $fobTotalRaw;
+
+    if ($quantity <= 0) {
+        http_response_code(422);
+        echo json_encode([
+            'status' => 'error',
+            'message' => 'Quantity must be greater than zero.',
+        ]);
+        exit;
+    }
+
+    if ($fobTotal < 0) {
+        http_response_code(422);
+        echo json_encode([
+            'status' => 'error',
+            'message' => 'FOB total cannot be negative.',
+        ]);
+        exit;
+    }
 
     $pdo->beginTransaction();
 
@@ -200,9 +241,9 @@ try {
 
     $insertInvoiceProduct = $pdo->prepare(
         'INSERT INTO proforma_invoice_products (
-            proforma_invoice_id, vendor_product_id, product_name, brand, country_of_origin, product_category, product_size, unit, rate, item_weight, dec_unit_price, asses_unit_price, hs_code, created_at
+            proforma_invoice_id, vendor_product_id, product_name, brand, country_of_origin, product_category, product_size, unit, rate, item_weight, dec_unit_price, asses_unit_price, hs_code, quantity, fob_total, created_at
         ) VALUES (
-            :proforma_invoice_id, :vendor_product_id, :product_name, :brand, :country_of_origin, :product_category, :product_size, :unit, :rate, :item_weight, :dec_unit_price, :asses_unit_price, :hs_code, NOW()
+            :proforma_invoice_id, :vendor_product_id, :product_name, :brand, :country_of_origin, :product_category, :product_size, :unit, :rate, :item_weight, :dec_unit_price, :asses_unit_price, :hs_code, :quantity, :fob_total, NOW()
         )'
     );
 
@@ -220,6 +261,8 @@ try {
         ':dec_unit_price' => $productData['dec_unit_price'],
         ':asses_unit_price' => $productData['asses_unit_price'],
         ':hs_code' => $productData['hs_code'],
+        ':quantity' => $quantity,
+        ':fob_total' => $fobTotal,
     ]);
 
     $invoiceProductId = (int) $pdo->lastInsertId();
@@ -252,6 +295,10 @@ try {
             'asses_unit_price' => $productData['asses_unit_price'],
             'asses_unit_price_formatted' => number_format((float) $productData['asses_unit_price'], 2),
             'hs_code' => $productData['hs_code'],
+            'quantity' => number_format($quantity, 3, '.', ''),
+            'quantity_formatted' => rtrim(rtrim(number_format($quantity, 3, '.', ''), '0'), '.') ?: '0',
+            'fob_total' => number_format($fobTotal, 2, '.', ''),
+            'fob_total_formatted' => number_format($fobTotal, 2),
         ],
         'new_vendor_product' => $newVendorProduct,
     ]);

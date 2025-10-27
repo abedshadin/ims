@@ -28,6 +28,7 @@ if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
 
 $fileToken = trim($_POST['file_token'] ?? '');
 $invoiceNumber = trim($_POST['invoice_number'] ?? '');
+$freightAmountRaw = trim($_POST['freight_amount'] ?? '');
 
 if ($fileToken === '' || ($fileId = IdCipher::decode($fileToken)) === null) {
     http_response_code(422);
@@ -45,6 +46,30 @@ if ($invoiceNumber === '') {
         'message' => 'The proforma invoice number is required.',
     ]);
     exit;
+}
+
+$freightAmount = 0.0;
+
+if ($freightAmountRaw !== '') {
+    if (!is_numeric($freightAmountRaw)) {
+        http_response_code(422);
+        echo json_encode([
+            'status' => 'error',
+            'message' => 'Freight must be provided as a numeric amount.',
+        ]);
+        exit;
+    }
+
+    $freightAmount = (float) $freightAmountRaw;
+
+    if ($freightAmount < 0) {
+        http_response_code(422);
+        echo json_encode([
+            'status' => 'error',
+            'message' => 'Freight cannot be negative.',
+        ]);
+        exit;
+    }
 }
 
 try {
@@ -66,12 +91,13 @@ try {
     }
 
     $insertStatement = $pdo->prepare(
-        'INSERT INTO proforma_invoices (vendor_file_id, invoice_number, created_at, created_by)
-         VALUES (:vendor_file_id, :invoice_number, NOW(), :created_by)'
+        'INSERT INTO proforma_invoices (vendor_file_id, invoice_number, freight_amount, created_at, created_by)
+         VALUES (:vendor_file_id, :invoice_number, :freight_amount, NOW(), :created_by)'
     );
     $insertStatement->execute([
         ':vendor_file_id' => $fileId,
         ':invoice_number' => $invoiceNumber,
+        ':freight_amount' => $freightAmount,
         ':created_by' => Auth::userId(),
     ]);
 
@@ -91,6 +117,7 @@ try {
         'proforma' => [
             'token' => $piToken,
             'invoice_number' => $invoiceNumber,
+            'freight_amount' => number_format($freightAmount, 2, '.', ''),
             'created_at' => $createdAt,
             'created_at_human' => date('j M Y, g:i A', strtotime($createdAt)),
             'products' => [],
