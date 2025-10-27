@@ -6,9 +6,14 @@ document.addEventListener('DOMContentLoaded', () => {
         return;
     }
 
+    const resetAlert = () => {
+        alertBox.textContent = '';
+        alertBox.className = 'alert d-none';
+    };
+
     const showAlert = (message, type = 'info') => {
         alertBox.textContent = message;
-        alertBox.className = `alert alert-${type}`;
+        alertBox.className = `alert alert-${type} mt-3`;
     };
 
     form.addEventListener('submit', async (event) => {
@@ -16,6 +21,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
         const submitButton = form.querySelector('[type="submit"]');
         const formData = new FormData(form);
+
+        resetAlert();
 
         try {
             submitButton.disabled = true;
@@ -25,7 +32,19 @@ document.addEventListener('DOMContentLoaded', () => {
                 body: formData,
             });
 
-            const result = await response.json();
+            if (response.status === 401) {
+                const redirectTarget = `${window.location.pathname}${window.location.search}`;
+                window.location.href = `../auth/login.php?redirect=${encodeURIComponent(redirectTarget)}`;
+                return;
+            }
+
+            let result;
+
+            try {
+                result = await response.json();
+            } catch (error) {
+                throw new Error('Unexpected response from the server.');
+            }
 
             if (!response.ok || result.status !== 'success') {
                 throw new Error(result.message || 'Unable to save vendor information.');
@@ -37,6 +56,12 @@ document.addEventListener('DOMContentLoaded', () => {
             showAlert(error.message, 'danger');
         } finally {
             submitButton.disabled = false;
+        }
+    });
+    
+    form.addEventListener('input', () => {
+        if (!alertBox.classList.contains('d-none')) {
+            resetAlert();
         }
     });
 });

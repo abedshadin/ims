@@ -102,6 +102,7 @@ final class Auth
     {
         $name = trim($name);
         $email = trim($email);
+        $password = trim($password);
 
         if ($name === '' || $email === '' || $password === '') {
             return [

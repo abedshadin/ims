@@ -25,7 +25,7 @@ $currentUserName = Auth::userName();
             <?php if ($currentUserName): ?>
                 <div class="fw-semibold">Signed in as <?php echo htmlspecialchars($currentUserName, ENT_QUOTES, 'UTF-8'); ?></div>
             <?php endif; ?>
-            <a class="btn btn-outline-secondary btn-sm mt-2" href="../auth/logout.php?redirect=<?php echo urlencode($_SERVER['REQUEST_URI'] ?? 'vendor/create.php'); ?>">Sign Out</a>
+            <a class="btn btn-outline-secondary btn-sm mt-2" href="../auth/logout.php?redirect=<?php echo urlencode($_SERVER['REQUEST_URI'] ?? '/vendor/create.php'); ?>">Sign Out</a>
         </div>
     </div>
     <div class="row justify-content-center">

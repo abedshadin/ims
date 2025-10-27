@@ -3,14 +3,41 @@
 declare(strict_types=1);
 
 require_once __DIR__ . '/../../app/Auth.php';
+require_once __DIR__ . '/../../app/Database.php';
 
 Auth::requireLogin('/auth/login.php');
 
 $currentUserName = Auth::userName();
+$vendors = [];
+$loadError = null;
+
+try {
+    $pdo = Database::getConnection();
+    $statement = $pdo->query(
+        'SELECT v.id, v.vendor_name, v.vendor_address, v.beneficiary_bank_name, v.created_at, u.name AS created_by_name ' .
+        'FROM vendors v ' .
+        'LEFT JOIN users u ON u.id = v.created_by ' .
+        'ORDER BY v.created_at DESC'
+    );
+    $vendors = $statement->fetchAll();
+} catch (\PDOException $exception) {
+    $loadError = 'Unable to load vendors right now. Please try again later.';
+}
 
 function e(string $value): string
 {
     return htmlspecialchars($value, ENT_QUOTES, 'UTF-8');
+}
+
+function formatDate(?string $value): string
+{
+    if ($value === null) {
+        return '';
+    }
+
+    $timestamp = strtotime($value);
+
+    return $timestamp !== false ? date('M j, Y g:i A', $timestamp) : $value;
 }
 ?>
 <!DOCTYPE html>
@@ -38,7 +65,39 @@ function e(string $value): string
     </div>
     <div class="card shadow-sm">
         <div class="card-body">
-            <p class="text-muted mb-0">Vendor records will display here once the listing feature is implemented.</p>
+            <?php if ($loadError !== null): ?>
+                <div class="alert alert-danger mb-0" role="alert"><?php echo e($loadError); ?></div>
+            <?php elseif (empty($vendors)): ?>
+                <p class="text-muted mb-0">No vendors have been captured yet. Use the button below to add the first vendor.</p>
+            <?php else: ?>
+                <div class="table-responsive">
+                    <table class="table table-striped align-middle mb-0">
+                        <thead>
+                            <tr>
+                                <th scope="col">Vendor</th>
+                                <th scope="col">Beneficiary Bank</th>
+                                <th scope="col">Created</th>
+                                <th scope="col">Created By</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <?php foreach ($vendors as $vendor): ?>
+                                <tr>
+                                    <td>
+                                        <div class="fw-semibold"><?php echo e($vendor['vendor_name']); ?></div>
+                                        <div class="text-muted small"><?php echo e($vendor['vendor_address']); ?></div>
+                                    </td>
+                                    <td>
+                                        <div class="fw-semibold"><?php echo e($vendor['beneficiary_bank_name']); ?></div>
+                                    </td>
+                                    <td><?php echo e(formatDate($vendor['created_at'])); ?></td>
+                                    <td><?php echo e($vendor['created_by_name'] ?? '—'); ?></td>
+                                </tr>
+                            <?php endforeach; ?>
+                        </tbody>
+                    </table>
+                </div>
+            <?php endif; ?>
         </div>
     </div>
     <div class="mt-4 d-flex gap-2">
