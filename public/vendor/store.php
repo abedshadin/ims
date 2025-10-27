@@ -2,9 +2,18 @@
 
 declare(strict_types=1);
 
-session_start();
+require_once __DIR__ . '/../../app/Auth.php';
 
 header('Content-Type: application/json');
+
+if (!Auth::check()) {
+    http_response_code(401);
+    echo json_encode([
+        'status' => 'error',
+        'message' => 'Authentication required.',
+    ]);
+    exit;
+}
 
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
     http_response_code(405);
@@ -81,7 +90,7 @@ try {
         ':advising_bank_name' => $input['advising_bank_name'],
         ':advising_bank_account' => $input['advising_bank_account'],
         ':advising_swift_code' => $input['advising_swift_code'],
-        ':created_by' => $_SESSION['user_id'] ?? null,
+        ':created_by' => Auth::userId(),
     ]);
 
     echo json_encode([
