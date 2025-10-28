@@ -7,6 +7,7 @@ require_once __DIR__ . '/../../app/Database.php';
 require_once __DIR__ . '/../../app/IdCipher.php';
 require_once __DIR__ . '/../../app/FileMetadata.php';
 require_once __DIR__ . '/../../app/FileLcDetails.php';
+require_once __DIR__ . '/../../app/BankDirectory.php';
 
 Auth::requireLogin('/auth/login.php');
 
@@ -23,6 +24,8 @@ $file = null;
 $vendorProducts = [];
 $proformas = [];
 $lcDetails = null;
+$bankProfile = null;
+$bankReference = null;
 
 if ($fileId === null) {
     $loadError = 'A valid file reference was not provided.';
@@ -36,6 +39,9 @@ if ($fileId === null) {
             $loadError = 'The requested file could not be found.';
         } else {
             $vendorId = (int) $file['vendor_id'];
+
+            $bankProfile = $file['bank_profile'] ?? null;
+            $bankReference = $file['bank_reference'] ?? null;
 
             $vendorProductsStatement = $pdo->prepare(
                 'SELECT id, product_name, brand, country_of_origin, product_category, product_size, unit, rate, item_weight, dec_unit_price, asses_unit_price, hs_code
@@ -146,6 +152,7 @@ if ($fileId === null) {
 
 $initialData = [
     'file' => $file ? [
+        'id' => $file['id'] ?? null,
         'token' => $file['token'] ?? $fileToken,
         'file_name' => (string) $file['file_name'],
         'vendor_name' => (string) $file['vendor_name'],
@@ -160,6 +167,8 @@ $initialData = [
         'advising_bank_name' => (string) ($file['advising_bank_name'] ?? ''),
         'advising_bank_account' => (string) ($file['advising_bank_account'] ?? ''),
         'advising_swift_code' => (string) ($file['advising_swift_code'] ?? ''),
+        'bank_reference' => $bankReference,
+        'bank_profile' => $bankProfile,
         'created_at' => $file['created_at'] ?? null,
         'created_at_human' => $file['created_at_human'] ?? '',
         'created_by' => $file['created_by'] ?? null,
@@ -191,6 +200,7 @@ $initialData = [
     }, $vendorProducts))),
     'proformas' => $proformas,
     'lc' => $lcDetails,
+    'bank' => $bankProfile,
 ];
 
 try {

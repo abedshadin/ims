@@ -7,7 +7,7 @@ final class FileLcDetails
     public static function load(PDO $pdo, int $fileId): ?array
     {
         $statement = $pdo->prepare(
-            'SELECT id, vendor_file_id, lc_number, lc_date, lc_type, lc_amount, latest_shipment_date, expiry_date, created_at, updated_at, created_by, updated_by
+            'SELECT id, vendor_file_id, lc_number, lc_date, lc_type, subject_line, lc_amount, latest_shipment_date, expiry_date, created_at, updated_at, created_by, updated_by
              FROM file_letters_of_credit
              WHERE vendor_file_id = :file_id
              LIMIT 1'
@@ -36,6 +36,7 @@ final class FileLcDetails
             'vendor_file_id' => isset($row['vendor_file_id']) ? (int) $row['vendor_file_id'] : null,
             'lc_number' => (string) ($row['lc_number'] ?? ''),
             'lc_type' => (string) ($row['lc_type'] ?? ''),
+            'subject_line' => (string) ($row['subject_line'] ?? ''),
             'lc_amount' => $lcAmount['value'],
             'lc_amount_formatted' => $lcAmount['formatted'],
             'lc_date' => $lcDate['value'],

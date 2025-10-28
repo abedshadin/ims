@@ -3,6 +3,8 @@ $lcNumber = $lcDetails['lc_number'] ?? '';
 $lcDate = $lcDetails['lc_date'] ?? '';
 $lcType = $lcDetails['lc_type'] ?? '';
 $lcAmount = $lcDetails['lc_amount'] ?? '';
+$subjectLine = $lcDetails['subject_line'] ?? '';
+$subjectLineValue = $subjectLine !== '' ? $subjectLine : 'Opening L/C for Import';
 $lcAmountFormatted = $lcDetails['lc_amount_formatted'] ?? '0.00';
 $lcDateHuman = $lcDetails['lc_date_human'] ?? '';
 $latestShipment = $lcDetails['latest_shipment_date'] ?? '';
@@ -25,6 +27,10 @@ $hasLcDetails = $lcNumber !== '';
                     <div class="col-md-6">
                         <label class="form-label" for="lc_type">LC Type</label>
                         <input class="form-control" type="text" id="lc_type" name="lc_type" value="<?php echo e($lcType); ?>" placeholder="e.g. Sight" required>
+                    </div>
+                    <div class="col-12">
+                        <label class="form-label" for="subject_line">Subject Line</label>
+                        <input class="form-control" type="text" id="subject_line" name="subject_line" value="<?php echo e($subjectLineValue); ?>" placeholder="e.g. Opening L/C for Import" data-default-value="Opening L/C for Import">
                     </div>
                     <div class="col-md-6">
                         <label class="form-label" for="lc_date">LC Date</label>
@@ -71,6 +77,10 @@ $hasLcDetails = $lcNumber !== '';
                         <div class="col">
                             <dt class="text-uppercase text-muted">LC Type</dt>
                             <dd class="fw-semibold mb-0" data-lc-field="lc_type"><?php echo $hasLcDetails ? e($lcType) : '—'; ?></dd>
+                        </div>
+                        <div class="col">
+                            <dt class="text-uppercase text-muted">Subject</dt>
+                            <dd class="fw-semibold mb-0" data-lc-field="subject_line"><?php echo $hasLcDetails && $subjectLine !== '' ? e($subjectLine) : '—'; ?></dd>
                         </div>
                         <div class="col">
                             <dt class="text-uppercase text-muted">LC Date</dt>

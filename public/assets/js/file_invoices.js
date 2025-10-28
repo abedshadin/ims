@@ -28,6 +28,9 @@ document.addEventListener('DOMContentLoaded', () => {
     state.vendorProducts = Array.isArray(state.vendorProducts) ? state.vendorProducts : [];
     state.file = state.file && typeof state.file === 'object' ? state.file : null;
     state.lc = state.lc && typeof state.lc === 'object' ? state.lc : null;
+    state.bank = state.bank && typeof state.bank === 'object'
+        ? state.bank
+        : (state.file && typeof state.file.bank_profile === 'object' ? state.file.bank_profile : null);
 
     const piList = document.getElementById('piList');
     const noPiMessage = document.getElementById('noPiMessage');
@@ -155,22 +158,43 @@ document.addEventListener('DOMContentLoaded', () => {
         return `${sign}${number.toFixed(2)}%`;
     };
 
-    const bankDirectory = {
-        DBBL: {
-            name: 'Dutch-Bangla Bank Limited',
-            addressLines: ['47 Motijheel Commercial Area', 'Dhaka 1000', 'Bangladesh'],
-            accountNumber: '',
-        },
-        SCB: {
-            name: 'Standard Chartered Bank',
-            addressLines: ['67 Gulshan Avenue', 'Dhaka 1212', 'Bangladesh'],
-            accountNumber: '',
-        },
-        BBL: {
-            name: 'BRAC Bank Limited',
-            addressLines: ['1 Gulshan Avenue', 'Dhaka 1212', 'Bangladesh'],
-            accountNumber: '',
-        },
+    const getBankProfile = () => {
+        if (state.bank && typeof state.bank === 'object') {
+            return state.bank;
+        }
+
+        if (state.file && typeof state.file.bank_profile === 'object') {
+            return state.file.bank_profile;
+        }
+
+        return null;
+    };
+
+    const buildBankReference = () => {
+        if (!state.file) {
+            return 'TFL/SCM/BANK/1';
+        }
+
+        if (state.file.bank_reference) {
+            return `${state.file.bank_reference}`;
+        }
+
+        const bankCode = (state.file.bank_name || 'BANK').toString().toUpperCase();
+        const fileName = `${state.file.file_name || ''}`;
+        let sequence = '';
+
+        if (fileName) {
+            const segments = fileName.split('/');
+            if (segments.length > 0) {
+                sequence = segments[segments.length - 1] || '';
+            }
+        }
+
+        if (!sequence) {
+            sequence = `${state.file.id || state.file.token || 1}`;
+        }
+
+        return `TFL/SCM/${bankCode}/${sequence}`;
     };
 
     const parseDateValue = (value) => {
@@ -330,6 +354,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const buildLetterStyles = () => {
         return `
             body { font-family: 'Times New Roman', serif; background: #fff; color: #1f2933; margin: 0; padding: 0; }
+            @page { size: A4; margin: 0; }
             .page { width: 8.27in; min-height: 11.69in; margin: 0 auto; padding: 1.1in 0.9in 1.2in; box-sizing: border-box; position: relative; }
             .page-header, .page-footer { text-align: center; }
             .page-header img, .page-footer img { max-width: 100%; height: auto; }
@@ -485,19 +510,16 @@ document.addEventListener('DOMContentLoaded', () => {
         const metrics = calculateProformaMetrics(proforma);
         const file = state.file || {};
 
-        const bankKey = (file.bank_name || '').toUpperCase();
-        const bankInfo = bankDirectory[bankKey] || {
-            name: file.bank_name || 'BANK NAME',
-            addressLines: [],
-            accountNumber: '',
-        };
-
-        const bankAddressLines = (bankInfo.addressLines || []).filter((line) => line && line.trim().length > 0);
+        const bankInfo = getBankProfile() || {};
+        const bankName = bankInfo.name || file.bank_name || 'BANK NAME';
+        const bankAddressLines = Array.isArray(bankInfo.address_lines)
+            ? bankInfo.address_lines.filter((line) => line && line.trim().length > 0)
+            : [];
         const bankAddressHtml = bankAddressLines.length > 0
             ? bankAddressLines.map((line) => `${escapeHtml(line)}<br>`).join('')
             : 'Address Line 1<br>Address Line 2<br>Address Line 3';
 
-        const referenceNo = file.file_name || 'TFL/SCM/BANK/YEAR/XXX';
+        const referenceNo = buildBankReference();
         const today = formatDate(new Date(), { day: '2-digit', month: 'long', year: 'numeric' });
         const vendorName = file.vendor_name || 'VENDOR NAME';
         const vendorAddressHtml = formatMultiline(file.vendor_address || '') || 'VENDOR ADDRESS';
@@ -505,7 +527,11 @@ document.addEventListener('DOMContentLoaded', () => {
         const currencySymbol = (state.file && state.file.default_currency) || 'US$';
         const grandTotal = metrics.totalCnf;
         const totalInWords = `${currencyToWords(grandTotal, 'US Dollars', 'Cents')} Only`;
-        const accountNumber = bankInfo.accountNumber || (state.file && (state.file.bank_account_number || state.file.beneficiary_bank_account)) || '';
+        const accountNumberRaw = bankInfo.account_number || (state.file && (state.file.bank_account_number || state.file.beneficiary_bank_account)) || '';
+        const accountName = bankInfo.account_name || '';
+        const accountNumber = accountName
+            ? `${accountNumberRaw || 'ACCOUNT_NUMBER_NOT_FOUND'} (${accountName})`
+            : accountNumberRaw;
 
         return `
             <div class="page">
@@ -515,7 +541,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     <p class="date">${escapeHtml(today || '')}</p>
 
                     <div class="address-block">
-                        <p><b>${escapeHtml(bankInfo.name || 'BANK NAME')}</b><br>
+                        <p><b>${escapeHtml(bankName)}</b><br>
                         ${bankAddressHtml}</p>
                     </div>
 
@@ -677,6 +703,10 @@ document.addEventListener('DOMContentLoaded', () => {
             ...meta,
         };
 
+        if (meta.bank_profile && typeof meta.bank_profile === 'object') {
+            state.bank = meta.bank_profile;
+        }
+
         if (fileMetaCreated) {
             const createdAt = state.file.created_at_human || '';
             const createdBy = state.file.created_by_name || '';
@@ -725,6 +755,7 @@ document.addEventListener('DOMContentLoaded', () => {
             lc_number: 'lc_number',
             lc_type: 'lc_type',
             lc_date: 'lc_date',
+            subject_line: 'subject_line',
             lc_amount: 'lc_amount',
             latest_shipment_date: 'latest_shipment_date',
             expiry_date: 'expiry_date',
@@ -737,7 +768,11 @@ document.addEventListener('DOMContentLoaded', () => {
             }
 
             const value = lc && typeof lc === 'object' ? (lc[key] || '') : '';
-            field.value = value;
+            if (value === '' && typeof field.dataset.defaultValue !== 'undefined') {
+                field.value = field.dataset.defaultValue;
+            } else {
+                field.value = value;
+            }
         });
     };
 
@@ -762,6 +797,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (state.lc) {
             setFieldText('lc_number', state.lc.lc_number, '—');
             setFieldText('lc_type', state.lc.lc_type, '—');
+            setFieldText('subject_line', state.lc.subject_line, '—');
             setFieldText('lc_date_human', state.lc.lc_date_human || state.lc.lc_date, '—');
             setFieldText('latest_shipment_date_human', state.lc.latest_shipment_date_human || state.lc.latest_shipment_date, '—');
             setFieldText('expiry_date_human', state.lc.expiry_date_human || state.lc.expiry_date, '—');
@@ -776,6 +812,7 @@ document.addEventListener('DOMContentLoaded', () => {
         } else {
             setFieldText('lc_number', '', '—');
             setFieldText('lc_type', '', '—');
+            setFieldText('subject_line', '', '—');
             setFieldText('lc_date_human', '', '—');
             setFieldText('latest_shipment_date_human', '', '—');
             setFieldText('expiry_date_human', '', '—');

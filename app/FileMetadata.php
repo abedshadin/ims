@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 require_once __DIR__ . '/IdCipher.php';
+require_once __DIR__ . '/BankDirectory.php';
 
 final class FileMetadata
 {
@@ -64,6 +65,27 @@ final class FileMetadata
             $token = null;
         }
 
+        $bankProfile = BankDirectory::findByCode($pdo, (string) $row['bank_name']);
+
+        $fileName = (string) $row['file_name'];
+        $sequence = '';
+
+        if ($fileName !== '') {
+            $parts = explode('/', $fileName);
+            $lastPart = end($parts);
+
+            if ($lastPart !== false && $lastPart !== '') {
+                $sequence = (string) $lastPart;
+            }
+        }
+
+        if ($sequence === '') {
+            $sequence = (string) $fileId;
+        }
+
+        $bankCode = strtoupper((string) $row['bank_name']);
+        $bankReference = sprintf('TFL/SCM/%s/%s', $bankCode !== '' ? $bankCode : 'BANK', $sequence);
+
         return [
             'id' => (int) $row['id'],
             'token' => $token,
@@ -79,6 +101,8 @@ final class FileMetadata
             'advising_bank_name' => (string) $row['advising_bank_name'],
             'advising_bank_account' => (string) $row['advising_bank_account'],
             'advising_swift_code' => (string) $row['advising_swift_code'],
+            'bank_reference' => $bankReference,
+            'bank_profile' => $bankProfile,
             'created_at' => $createdAt,
             'created_at_human' => $createdAtHuman,
             'created_by' => $row['created_by'] !== null ? (int) $row['created_by'] : null,
