@@ -367,15 +367,14 @@ document.addEventListener('DOMContentLoaded', () => {
 
     const buildPrintStyles = () => {
         return `
-            body { font-family: 'Segoe UI', Tahoma, sans-serif; color: #212529; background: #f8f9fa; margin: 0; padding: 2rem; }
+            :root { color-scheme: only light; }
+            @page { size: A4; margin: 14mm; }
+            body { font-family: 'Segoe UI', Tahoma, sans-serif; color: #212529; background: #f8f9fa; margin: 0; padding: 0 0 2rem; }
             h1 { margin-bottom: 0.25rem; }
-            h2 { margin-top: 0; font-size: 1.1rem; color: #6c757d; }
-            .print-header { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: flex-start; margin-bottom: 1.5rem; }
+            h2 { margin-top: 0; font-size: 1.05rem; color: #6c757d; }
+            .print-header { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: flex-start; margin-bottom: 1.5rem; gap: 1rem; }
             .print-header .meta { display: grid; gap: 0.35rem; font-size: 0.9rem; }
             .print-header .meta span { font-weight: 600; color: #495057; }
-            .print-actions { display: flex; gap: 0.5rem; margin-bottom: 1.5rem; }
-            .print-actions button { padding: 0.4rem 0.9rem; border: 1px solid #0d6efd; background: #0d6efd; color: #fff; border-radius: 0.3rem; cursor: pointer; font-size: 0.9rem; }
-            .print-actions button.secondary { background: #6c757d; border-color: #6c757d; }
             table { width: 100%; border-collapse: collapse; margin-bottom: 1.5rem; background: #fff; }
             th, td { padding: 0.55rem 0.75rem; border: 1px solid #dee2e6; text-align: left; }
             th { background: #e9ecef; font-size: 0.85rem; text-transform: uppercase; letter-spacing: 0.03em; }
@@ -384,37 +383,35 @@ document.addEventListener('DOMContentLoaded', () => {
             .text-center { text-align: center; }
             .muted { color: #6c757d; font-size: 0.85rem; }
             @media print {
-                body { background: #fff; padding: 0.5in; }
-                .print-actions { display: none; }
+                body { background: #fff; padding: 0; }
+                .print-actions { display: none !important; }
             }
         `;
     };
 
     const buildLetterStyles = () => {
         return `
-            body { font-family: 'Times New Roman', serif; background: #fff; color: #1f2933; margin: 0; padding: 0; }
+            :root { color-scheme: only light; }
             @page { size: A4; margin: 0; }
-            .page { width: 8.27in; height: 11.69in; margin: 0 auto; padding: 0.35in 0.6in 0.35in; box-sizing: border-box; display: flex; flex-direction: column; justify-content: space-between; overflow: hidden; }
-            .page-header, .page-footer { text-align: center; margin: 0; padding: 0; flex: 0 0 auto; }
-            .page-header img, .page-footer img { display: block; width: 100%; height: auto; margin: 0; }
-            .page-content { flex: 1 1 auto; display: flex; flex-direction: column; justify-content: flex-start; margin: 0.35rem 0 0.5rem; font-size: 0.92rem; line-height: 1.5; }
+            body { font-family: 'Times New Roman', serif; background: #f8f9fa; color: #1f2933; margin: 0; padding: 0 0 2rem; }
+            .letter-page { width: 210mm; height: 297mm; max-height: 297mm; margin: 0 auto 2rem; background: #fff; box-sizing: border-box; padding: 18mm 20mm; display: flex; flex-direction: column; border: 1px solid #e9ecef; box-shadow: 0 0.5rem 1.5rem rgba(15, 23, 42, 0.08); overflow: hidden; }
+            .letter-header, .letter-footer { flex: 0 0 auto; }
+            .letter-header img, .letter-footer img { display: block; width: 100%; height: auto; }
+            .letter-body { flex: 1 1 auto; display: flex; flex-direction: column; gap: 0.75rem; }
+            .letter-body p { margin-bottom: 0.75rem; }
             .bank-letter-body .ref-no { font-weight: 600; margin-bottom: 0.35rem; }
-            .bank-letter-body .date { text-align: left; margin-bottom: 1rem; }
-            .bank-letter-body .address-block p { margin-bottom: 1.1rem; }
-            .bank-letter-body .subject { margin-top: 1.2rem; margin-bottom: 1.2rem; }
-            .closing { margin-top: 2rem; }
-            .sig-row { display: flex; justify-content: space-between; gap: 2.5rem; font-weight: 600; }
+            .bank-letter-body .subject { margin-top: 0.75rem; margin-bottom: 1.1rem; }
+            .closing { margin-top: auto; }
+            .sig-row { display: flex; justify-content: space-between; gap: 2.5rem; font-weight: 600; margin-top: 2.5rem; }
             .sig { flex: 1; }
-            .doc-title { font-size: 1.15rem; font-weight: 700; text-align: center; margin-bottom: 1rem; text-transform: uppercase; }
+            .doc-title { font-size: 1.1rem; font-weight: 700; text-align: center; margin-bottom: 1rem; text-transform: uppercase; }
             ol { margin: 0; padding-left: 1.1rem; }
             ol li { margin-bottom: 0.55rem; text-align: justify; }
-            .page-break { page-break-before: avoid; }
-            a { color: inherit; }
             @media print {
                 body { background: #fff; padding: 0; }
-                .page { page-break-after: always; box-shadow: none; }
-                .page:last-child { page-break-after: auto; }
-                .print-actions { display: none; }
+                .letter-page { margin: 0 auto; box-shadow: none; border: none; page-break-after: always; }
+                .letter-page:last-child { page-break-after: auto; }
+                .print-actions { display: none !important; }
             }
         `;
     };
@@ -473,12 +470,13 @@ document.addEventListener('DOMContentLoaded', () => {
                     <meta charset="utf-8">
                     <title>${title}</title>
                     <base href="${baseHref}">
+                    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" integrity="sha384-QWTKZyjpPEjISv5WaRU9OFeRpok6YctnYmDr5pNlyT2bRjXh0JMhjY6hW+ALEwIH" crossorigin="anonymous">
                     <style>${baseStyles}${extraStyles}</style>
                 </head>
-                <body>
-                    <div class="print-actions">
-                        <button type="button" onclick="window.print()">Print</button>
-                        <button type="button" class="secondary" onclick="window.close()">Close</button>
+                <body class="bg-light">
+                    <div class="print-actions position-sticky top-0 d-print-none d-flex gap-2 p-3">
+                        <button type="button" class="btn btn-primary" onclick="window.print()">Print</button>
+                        <button type="button" class="btn btn-outline-secondary" onclick="window.close()">Close</button>
                     </div>
                     ${content}
                 </body>
@@ -584,26 +582,22 @@ document.addEventListener('DOMContentLoaded', () => {
             : accountNumberRaw;
 
         return `
-            <div class="page">
-                <header class="page-header"><img src="header.jpg" alt="Header"></header>
-                <main class="page-content bank-letter-body" role="main">
-                    <p class="ref-no">Ref: ${escapeHtml(referenceNo)}</p>
-                    <p class="date">${escapeHtml(referenceDateDisplay || '')}</p>
+            <div class="letter-page d-flex flex-column">
+                <header class="letter-header mb-3"><img src="header.jpg" alt="Header"></header>
+                <main class="letter-body bank-letter-body" role="main">
+                    <p class="ref-no mb-1">Ref: ${escapeHtml(referenceNo)}</p>
+                    <p class="date mb-3">${escapeHtml(referenceDateDisplay || '')}</p>
 
-                    <div class="address-block">
-                        <p><b>${escapeHtml(bankName)}</b><br>
+                    <div class="address-block mb-3">
+                        <p class="mb-0"><strong>${escapeHtml(bankName)}</strong><br>
                         ${bankAddressHtml}</p>
                     </div>
 
-                    <u><p class="attn"><strong>Attn: Trade Service (Import)</strong></p></u>
+                    <p class="attn text-uppercase fw-semibold">Attn: Trade Service (Import)</p>
 
-                    <u><b><p class="subject">
-                        Sub: ${escapeHtml(subjectLine)}
-                    </p></b></u>
+                    <p class="subject fw-semibold">Sub: ${escapeHtml(subjectLine)}</p>
 
-                    <p>Dear Sir,</p>
-
-                    <p style="text-align: justify;">
+                    <p class="mb-3" style="text-align: justify;">
                         We are enclosing L/C application form and other related papers duly filled in, stamped and
                         signed by us for opening L/C worth <strong>${escapeHtml(currencySymbol)} ${toCurrency(grandTotal)}
                         (${escapeHtml(totalInWords)})</strong>
@@ -623,13 +617,13 @@ document.addEventListener('DOMContentLoaded', () => {
                         For <strong>TRANSCOM FOODS LIMITED</strong></p>
                     </div>
 
-                    <div class="sig-row" style="margin-top: 4em;">
-                        <div class="sig" style="text-align: left;">Authorized Signature</div>
-                        <div class="sig" style="text-align: right;">Authorized Signature</div>
+                    <div class="sig-row">
+                        <div class="sig text-start">Authorized Signature</div>
+                        <div class="sig text-end">Authorized Signature</div>
                     </div>
 
                 </main>
-                <footer class="page-footer"><img src="footer.jpg" alt="Footer"></footer>
+                <footer class="letter-footer mt-auto pt-3"><img src="footer.jpg" alt="Footer"></footer>
             </div>
         `;
     };
@@ -704,11 +698,11 @@ document.addEventListener('DOMContentLoaded', () => {
             : `Please open irrevocable L/C through <strong>${escapeHtml(beneficiaryBank || 'Beneficiary Bank')}, SWIFT Code: ${escapeHtml(beneficiarySwift || 'N/A')}.</strong>`;
 
         return `
-            <div class="page">
-                <header class="page-header"><img src="header.jpg" alt="Header"></header>
-                <main class="page-content" role="main">
+            <div class="letter-page d-flex flex-column">
+                <header class="letter-header mb-3"><img src="header.jpg" alt="Header"></header>
+                <main class="letter-body" role="main">
                     <div class="doc-title">Other Terms &amp; Conditions</div>
-                    <ol>
+                    <ol class="ps-3">
                         <li>${lcLine}</li>
                         <li>All Packets / Cartons must show <strong>Date of Manufacture &amp; Expiry</strong>.</li>
                         <li>L/C number and date must appear in all shipping documents.</li>
@@ -733,12 +727,12 @@ document.addEventListener('DOMContentLoaded', () => {
                         <li>The beneficiary must send the shipment advice to Reliance Insurance Ltd. at their E-mail ID: <a href="mailto:info@reliance.com.bd">info@reliance.com.bd</a>.</li>
                         ${lcToleranceEnabled ? `<li>L/C allows ${escapeHtml(`${lcTolerancePercentage}`)}% tolerance in amount &amp; qty.</li>` : ''}
                     </ol>
-                    <div class="sig-row" style="margin-top: 3rem;">
-                        <div class="sig">Authorized Signature</div>
-                        <div class="sig">Authorized Signature</div>
+                    <div class="sig-row mt-auto">
+                        <div class="sig text-start">Authorized Signature</div>
+                        <div class="sig text-end">Authorized Signature</div>
                     </div>
                 </main>
-                <footer class="page-footer"><img src="footer.jpg" alt="Footer"></footer>
+                <footer class="letter-footer mt-auto pt-3"><img src="footer.jpg" alt="Footer"></footer>
             </div>
         `;
     };
