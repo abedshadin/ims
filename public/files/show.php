@@ -8,6 +8,7 @@ require_once __DIR__ . '/../../app/IdCipher.php';
 require_once __DIR__ . '/../../app/FileMetadata.php';
 require_once __DIR__ . '/../../app/FileLcDetails.php';
 require_once __DIR__ . '/../../app/BankDirectory.php';
+require_once __DIR__ . '/../../app/ProformaReference.php';
 
 Auth::requireLogin('/auth/login.php');
 
@@ -53,7 +54,7 @@ if ($fileId === null) {
             $vendorProducts = $vendorProductsStatement->fetchAll() ?: [];
 
             $proformaStatement = $pdo->prepare(
-                'SELECT id, invoice_number, freight_amount, created_at
+                'SELECT id, invoice_number, pi_header, freight_amount, created_at
                  FROM proforma_invoices
                  WHERE vendor_file_id = :file_id
                  ORDER BY created_at DESC, id DESC'
@@ -132,14 +133,32 @@ if ($fileId === null) {
                     ];
                 }
 
+                $reference = null;
+
+                if (is_array($file) && isset($file['bank_name'])) {
+                    try {
+                        $reference = ProformaReference::ensure($pdo, (int) $row['id'], (string) $file['bank_name']);
+                    } catch (Throwable $exception) {
+                        $reference = null;
+                    }
+                }
+
+                $referenceDate = $reference['date'] ?? null;
+
                 $proformas[] = [
                     'token' => $encodedId,
                     'invoice_number' => (string) $row['invoice_number'],
+                    'pi_header' => (string) $row['pi_header'],
                     'freight_amount' => number_format((float) $row['freight_amount'], 2, '.', ''),
                     'freight_amount_formatted' => number_format((float) $row['freight_amount'], 2),
                     'created_at' => (string) $row['created_at'],
                     'created_at_human' => date('j M Y, g:i A', strtotime((string) $row['created_at'])),
                     'products' => $products,
+                    'reference' => $reference ? [
+                        'code' => $reference['code'] ?? null,
+                        'date' => $referenceDate,
+                        'date_formatted' => $referenceDate ? date('j M Y', strtotime($referenceDate)) : null,
+                    ] : null,
                 ];
             }
 

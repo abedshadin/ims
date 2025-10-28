@@ -6,6 +6,7 @@ require_once __DIR__ . '/../../app/Auth.php';
 require_once __DIR__ . '/../../app/Database.php';
 require_once __DIR__ . '/../../app/IdCipher.php';
 require_once __DIR__ . '/../../app/FileMetadata.php';
+require_once __DIR__ . '/../../app/ProformaReference.php';
 
 header('Content-Type: application/json');
 
@@ -29,6 +30,7 @@ if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
 
 $fileToken = trim($_POST['file_token'] ?? '');
 $invoiceNumber = trim($_POST['invoice_number'] ?? '');
+$piHeader = trim($_POST['pi_header'] ?? '');
 $freightAmountRaw = trim($_POST['freight_amount'] ?? '');
 
 if ($fileToken === '' || ($fileId = IdCipher::decode($fileToken)) === null) {
@@ -48,6 +50,8 @@ if ($invoiceNumber === '') {
     ]);
     exit;
 }
+
+$piHeader = mb_substr($piHeader, 0, 255);
 
 $freightAmount = 0.0;
 
@@ -77,11 +81,13 @@ try {
     $pdo = Database::getConnection();
 
     $fileStatement = $pdo->prepare(
-        'SELECT id FROM vendor_files WHERE id = :id'
+        'SELECT id, bank_name FROM vendor_files WHERE id = :id'
     );
     $fileStatement->execute([':id' => $fileId]);
 
-    if (!$fileStatement->fetch()) {
+    $fileRow = $fileStatement->fetch();
+
+    if (!$fileRow) {
         http_response_code(404);
         echo json_encode([
             'status' => 'error',
@@ -90,20 +96,25 @@ try {
         exit;
     }
 
+    $bankName = (string) $fileRow['bank_name'];
+
     $pdo->beginTransaction();
 
     $insertStatement = $pdo->prepare(
-        'INSERT INTO proforma_invoices (vendor_file_id, invoice_number, freight_amount, created_at, created_by) '
-        . 'VALUES (:vendor_file_id, :invoice_number, :freight_amount, NOW(), :created_by)'
+        'INSERT INTO proforma_invoices (vendor_file_id, invoice_number, pi_header, freight_amount, created_at, created_by) '
+        . 'VALUES (:vendor_file_id, :invoice_number, :pi_header, :freight_amount, NOW(), :created_by)'
     );
     $insertStatement->execute([
         ':vendor_file_id' => $fileId,
         ':invoice_number' => $invoiceNumber,
+        ':pi_header' => $piHeader,
         ':freight_amount' => $freightAmount,
         ':created_by' => Auth::userId(),
     ]);
 
     $piId = (int) $pdo->lastInsertId();
+
+    $reference = ProformaReference::ensure($pdo, $piId, $bankName);
 
     $updateFileStatement = $pdo->prepare(
         'UPDATE vendor_files SET updated_at = NOW(), updated_by = :updated_by WHERE id = :id'
@@ -136,10 +147,16 @@ try {
         'proforma' => [
             'token' => $piToken,
             'invoice_number' => $invoiceNumber,
+            'pi_header' => $piHeader,
             'freight_amount' => number_format($freightAmount, 2, '.', ''),
             'created_at' => $createdAt,
             'created_at_human' => date('j M Y, g:i A', strtotime($createdAt)),
             'products' => [],
+            'reference' => [
+                'code' => $reference['code'] ?? null,
+                'date' => $reference['date'] ?? null,
+                'date_formatted' => isset($reference['date']) ? date('j M Y', strtotime($reference['date'])) : null,
+            ],
         ],
         'file_meta' => $fileMeta,
     ]);

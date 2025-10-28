@@ -8,18 +8,22 @@
         </div>
         <form id="createPiForm" class="row gy-3 mt-3" method="post" novalidate>
             <input type="hidden" name="file_token" value="<?php echo e($fileToken); ?>">
-            <div class="col-lg-5">
+            <div class="col-lg-4">
                 <label class="form-label text-uppercase small fw-semibold" for="invoice_number">Proforma Invoice Number</label>
                 <input class="form-control form-control-lg" type="text" id="invoice_number" name="invoice_number" placeholder="e.g. PI-2025-001" required>
             </div>
-            <div class="col-lg-3">
+            <div class="col-lg-4">
+                <label class="form-label text-uppercase small fw-semibold" for="pi_header">PI Header</label>
+                <input class="form-control form-control-lg" type="text" id="pi_header" name="pi_header" placeholder="e.g. Frozen Fries">
+            </div>
+            <div class="col-lg-2">
                 <label class="form-label text-uppercase small fw-semibold" for="freight_amount">Freight Amount</label>
                 <div class="input-group input-group-lg">
                     <span class="input-group-text">$</span>
                     <input class="form-control" type="number" step="0.01" id="freight_amount" name="freight_amount" placeholder="0.00">
                 </div>
             </div>
-            <div class="col-lg-4 d-flex align-items-end justify-content-lg-end">
+            <div class="col-lg-2 d-flex align-items-end justify-content-lg-end">
                 <button class="btn btn-primary btn-lg w-100 w-lg-auto" type="submit">Add Proforma Invoice</button>
             </div>
         </form>
@@ -75,6 +79,12 @@
             $lines[$index]['cnf_per_unit'] = $cnfPerUnit;
             $lines[$index]['cnf_total'] = $cnfTotal;
         }
+
+        $piHeaderValue = (string) ($proforma['pi_header'] ?? '');
+        $reference = is_array($proforma['reference'] ?? null) ? $proforma['reference'] : null;
+        $referenceCode = (string) ($reference['code'] ?? '');
+        $referenceDate = (string) ($reference['date'] ?? '');
+        $referenceDateFormatted = $referenceDate !== '' ? date('j M Y', strtotime($referenceDate)) : null;
         ?>
         <div class="card shadow-sm border-0 mb-4" data-pi-token="<?php echo e($piToken); ?>">
             <div class="card-body p-4">
@@ -91,6 +101,27 @@
                             <button class="btn btn-outline-primary" type="button" data-action="save-freight" data-pi-token="<?php echo e($piToken); ?>">Save Freight</button>
                         </div>
                         <div class="text-muted small mt-1">Freight is distributed by total weight when calculating C&amp;F.</div>
+                        <div class="row row-cols-1 row-cols-lg-4 g-3 mt-3 align-items-end">
+                            <div class="col">
+                                <label class="form-label text-uppercase small fw-semibold" for="pi_header_<?php echo e($piToken); ?>">PI Header</label>
+                                <input class="form-control form-control-sm" type="text" id="pi_header_<?php echo e($piToken); ?>" value="<?php echo e($piHeaderValue); ?>" data-pi-header-input>
+                            </div>
+                            <div class="col">
+                                <label class="form-label text-uppercase small fw-semibold">Bank Reference</label>
+                                <input class="form-control form-control-sm" type="text" value="<?php echo e($referenceCode); ?>" data-bank-reference readonly>
+                            </div>
+                            <div class="col">
+                                <label class="form-label text-uppercase small fw-semibold" for="bank_ref_date_<?php echo e($piToken); ?>">Bank Ref Date</label>
+                                <input class="form-control form-control-sm" type="date" id="bank_ref_date_<?php echo e($piToken); ?>" value="<?php echo e($referenceDate); ?>" data-bank-ref-date>
+                                <?php if ($referenceDateFormatted): ?>
+                                    <div class="text-muted small mt-1">Saved as <?php echo e($referenceDateFormatted); ?></div>
+                                <?php endif; ?>
+                            </div>
+                            <div class="col d-flex align-items-end">
+                                <button class="btn btn-outline-secondary w-100" type="button" data-action="save-pi-details" data-pi-token="<?php echo e($piToken); ?>">Save Details</button>
+                            </div>
+                        </div>
+                        <div class="text-muted small mt-2">Bank letters append the PI header to “Opening L/C for Import”.</div>
                     </div>
                     <div class="d-flex flex-column align-items-lg-end gap-2 w-100 w-lg-auto">
                         <div class="d-flex flex-wrap justify-content-lg-end gap-2">

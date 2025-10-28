@@ -23,8 +23,43 @@ document.addEventListener('DOMContentLoaded', () => {
         return value.replace(/[^a-zA-Z0-9_\-]/g, '\\$&');
     };
 
+    const normaliseReference = (reference) => {
+        if (!reference || typeof reference !== 'object') {
+            return {
+                code: '',
+                date: '',
+                date_formatted: '',
+            };
+        }
+
+        return {
+            code: reference.code || '',
+            date: reference.date || '',
+            date_formatted: reference.date_formatted || '',
+        };
+    };
+
+    const normaliseProforma = (proforma) => {
+        if (!proforma || typeof proforma !== 'object') {
+            return null;
+        }
+
+        const products = Array.isArray(proforma.products) ? proforma.products : [];
+
+        return {
+            ...proforma,
+            pi_header: proforma.pi_header || '',
+            freight_amount: proforma.freight_amount || proforma.freight_amount_formatted || '0.00',
+            freight_amount_formatted: proforma.freight_amount_formatted || proforma.freight_amount || '0.00',
+            products,
+            reference: normaliseReference(proforma.reference),
+        };
+    };
+
     const state = parseJson(dataElement);
-    state.proformas = Array.isArray(state.proformas) ? state.proformas : [];
+    state.proformas = Array.isArray(state.proformas)
+        ? state.proformas.map(normaliseProforma).filter((item) => item)
+        : [];
     state.vendorProducts = Array.isArray(state.vendorProducts) ? state.vendorProducts : [];
     state.file = state.file && typeof state.file === 'object' ? state.file : null;
     state.lc = state.lc && typeof state.lc === 'object' ? state.lc : null;
@@ -170,7 +205,11 @@ document.addEventListener('DOMContentLoaded', () => {
         return null;
     };
 
-    const buildBankReference = () => {
+    const buildBankReference = (proforma = null) => {
+        if (proforma && proforma.reference && proforma.reference.code) {
+            return `${proforma.reference.code}`;
+        }
+
         if (!state.file) {
             return 'TFL/SCM/BANK/1';
         }
@@ -386,6 +425,11 @@ document.addEventListener('DOMContentLoaded', () => {
         const bankName = (file && file.bank_name) || '';
         const brand = (file && file.brand) || '';
         const createdAt = proforma.created_at_human || '';
+        const reference = normaliseReference(proforma.reference);
+        const referenceCode = reference.code || buildBankReference(proforma);
+        const referenceDate = reference.date
+            ? formatDate(reference.date, { day: '2-digit', month: 'short', year: 'numeric' })
+            : '';
 
         return `
             <div class="print-header">
@@ -399,6 +443,8 @@ document.addEventListener('DOMContentLoaded', () => {
                     <div><span>File Ref:</span> ${escapeHtml(fileName)}</div>
                     <div><span>Bank:</span> ${escapeHtml(bankName)}</div>
                     <div><span>Brand:</span> ${escapeHtml(brand)}</div>
+                    <div><span>Bank Ref:</span> ${escapeHtml(referenceCode)}</div>
+                    ${referenceDate ? `<div><span>Ref Date:</span> ${escapeHtml(referenceDate)}</div>` : ''}
                 </div>
             </div>
         `;
@@ -518,12 +564,16 @@ document.addEventListener('DOMContentLoaded', () => {
         const bankAddressHtml = bankAddressLines.length > 0
             ? bankAddressLines.map((line) => `${escapeHtml(line)}<br>`).join('')
             : 'Address Line 1<br>Address Line 2<br>Address Line 3';
-
-        const referenceNo = buildBankReference();
-        const today = formatDate(new Date(), { day: '2-digit', month: 'long', year: 'numeric' });
+        const reference = normaliseReference(proforma.reference);
+        const referenceNo = reference.code || buildBankReference(proforma);
+        const referenceDateDisplay = reference.date
+            ? formatDate(reference.date, { day: '2-digit', month: 'long', year: 'numeric' })
+            : formatDate(new Date(), { day: '2-digit', month: 'long', year: 'numeric' });
         const vendorName = file.vendor_name || 'VENDOR NAME';
         const vendorAddressHtml = formatMultiline(file.vendor_address || '') || 'VENDOR ADDRESS';
-        const subjectLine = (state.lc && state.lc.subject_line) || 'Opening L/C for Import';
+        const baseSubject = ((state.lc && state.lc.subject_line) || 'Opening L/C for Import').trim();
+        const headerSuffix = (proforma.pi_header || '').trim();
+        const subjectLine = headerSuffix ? `${baseSubject} ${headerSuffix}`.trim() : baseSubject;
         const currencySymbol = (state.file && state.file.default_currency) || 'US$';
         const grandTotal = metrics.totalCnf;
         const totalInWords = `${currencyToWords(grandTotal, 'US Dollars', 'Cents')} Only`;
@@ -538,7 +588,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 <header class="page-header"><img src="header.jpg" alt="Header"></header>
                 <main class="page-content bank-letter-body" role="main">
                     <p class="ref-no">Ref: ${escapeHtml(referenceNo)}</p>
-                    <p class="date">${escapeHtml(today || '')}</p>
+                    <p class="date">${escapeHtml(referenceDateDisplay || '')}</p>
 
                     <div class="address-block">
                         <p><b>${escapeHtml(bankName)}</b><br>
@@ -1018,6 +1068,10 @@ document.addEventListener('DOMContentLoaded', () => {
         card.dataset.piToken = proforma.token || '';
 
         const createdAt = proforma.created_at_human || '';
+        const piHeaderValue = proforma.pi_header || '';
+        const reference = normaliseReference(proforma.reference);
+        const referenceDateFormatted = reference.date_formatted
+            || (reference.date ? formatDate(reference.date, { day: '2-digit', month: 'short', year: 'numeric' }) : '');
 
         card.innerHTML = `
             <div class="card-body p-4">
@@ -1031,6 +1085,25 @@ document.addEventListener('DOMContentLoaded', () => {
                             <button class="btn btn-outline-primary" type="button" data-action="save-freight" data-pi-token="${escapeHtml(proforma.token || '')}">Save Freight</button>
                         </div>
                         <div class="text-muted small mt-1">Freight is distributed by total weight for C&amp;F.</div>
+                        <div class="row row-cols-1 row-cols-lg-4 g-3 mt-3 align-items-end">
+                            <div class="col">
+                                <label class="form-label text-uppercase small fw-semibold" for="pi_header_${escapeHtml(proforma.token || '')}">PI Header</label>
+                                <input class="form-control form-control-sm" type="text" id="pi_header_${escapeHtml(proforma.token || '')}" value="${escapeHtml(piHeaderValue)}" data-pi-header-input>
+                            </div>
+                            <div class="col">
+                                <label class="form-label text-uppercase small fw-semibold">Bank Reference</label>
+                                <input class="form-control form-control-sm" type="text" value="${escapeHtml(reference.code)}" data-bank-reference readonly>
+                            </div>
+                            <div class="col">
+                                <label class="form-label text-uppercase small fw-semibold" for="bank_ref_date_${escapeHtml(proforma.token || '')}">Bank Ref Date</label>
+                                <input class="form-control form-control-sm" type="date" id="bank_ref_date_${escapeHtml(proforma.token || '')}" value="${escapeHtml(reference.date)}" data-bank-ref-date>
+                                ${referenceDateFormatted ? `<div class="text-muted small mt-1">Saved as ${escapeHtml(referenceDateFormatted)}</div>` : ''}
+                            </div>
+                            <div class="col d-flex align-items-end">
+                                <button class="btn btn-outline-secondary w-100" type="button" data-action="save-pi-details" data-pi-token="${escapeHtml(proforma.token || '')}">Save Details</button>
+                            </div>
+                        </div>
+                        <div class="text-muted small mt-2">Bank letters append the PI header to “Opening L/C for Import”.</div>
                     </div>
                     <div class="d-flex flex-column align-items-md-end gap-2 w-100 w-md-auto">
                         <div class="d-flex flex-wrap justify-content-md-end gap-2">
@@ -1353,7 +1426,10 @@ document.addEventListener('DOMContentLoaded', () => {
                     }
 
                     if (result.proforma) {
-                        state.proformas.unshift(result.proforma);
+                        const normalised = normaliseProforma(result.proforma);
+                        if (normalised) {
+                            state.proformas.unshift(normalised);
+                        }
                         refreshPiList();
                         createPiForm.reset();
                     }
@@ -1480,6 +1556,79 @@ document.addEventListener('DOMContentLoaded', () => {
 
                         refreshPiList();
                         showAlert(piAlert, result.message || 'Freight saved.', 'success');
+                    } catch (error) {
+                        showAlert(piAlert, error.message, 'danger');
+                    } finally {
+                        actionButton.disabled = false;
+                        actionButton.innerHTML = originalText;
+                    }
+
+                    return;
+                }
+
+                if (action === 'save-pi-details') {
+                    const card = actionButton.closest('.card[data-pi-token]');
+
+                    if (!card) {
+                        return;
+                    }
+
+                    const headerInput = card.querySelector('[data-pi-header-input]');
+                    const referenceDateInput = card.querySelector('[data-bank-ref-date]');
+                    const originalText = actionButton.innerHTML;
+
+                    actionButton.disabled = true;
+                    actionButton.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>';
+
+                    try {
+                        resetAlert(piAlert);
+                        const formData = new FormData();
+                        formData.set('pi_token', piToken);
+                        formData.set('pi_header', headerInput ? headerInput.value : '');
+                        formData.set('reference_date', referenceDateInput ? referenceDateInput.value : '');
+
+                        const response = await fetch('proforma_update.php', {
+                            method: 'POST',
+                            body: formData,
+                        });
+
+                        if (response.status === 401) {
+                            window.location.reload();
+                            return;
+                        }
+
+                        let result;
+
+                        try {
+                            result = await response.json();
+                        } catch (error) {
+                            throw new Error('Unexpected response received.');
+                        }
+
+                        if (!response.ok || result.status !== 'success') {
+                            throw new Error(result.message || 'Unable to save the proforma details.');
+                        }
+
+                        if (result.proforma) {
+                            const normalised = normaliseProforma(result.proforma);
+                            const index = state.proformas.findIndex((item) => item.token === piToken);
+
+                            if (normalised && index !== -1) {
+                                const current = state.proformas[index];
+                                state.proformas[index] = {
+                                    ...current,
+                                    pi_header: normalised.pi_header,
+                                    reference: normalised.reference,
+                                };
+                            }
+                        }
+
+                        if (result.file_meta) {
+                            updateFileMeta(result.file_meta);
+                        }
+
+                        refreshPiList();
+                        showAlert(piAlert, result.message || 'Proforma details saved.', 'success');
                     } catch (error) {
                         showAlert(piAlert, error.message, 'danger');
                     } finally {

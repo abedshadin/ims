@@ -69,10 +69,23 @@ CREATE TABLE IF NOT EXISTS proforma_invoices (
     id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
     vendor_file_id BIGINT UNSIGNED NOT NULL,
     invoice_number VARCHAR(100) NOT NULL,
+    pi_header VARCHAR(255) NOT NULL DEFAULT '',
     freight_amount DECIMAL(15, 2) NOT NULL DEFAULT 0.00,
     created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
     created_by BIGINT UNSIGNED NULL,
     CONSTRAINT fk_proforma_invoices_file FOREIGN KEY (vendor_file_id) REFERENCES vendor_files(id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS proforma_invoice_references (
+    id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    proforma_invoice_id BIGINT UNSIGNED NOT NULL,
+    bank_name ENUM('DBBL', 'SCB', 'BBL') NOT NULL,
+    reference_code VARCHAR(50) NOT NULL,
+    reference_date DATE NOT NULL,
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE KEY uniq_proforma_reference (proforma_invoice_id),
+    UNIQUE KEY uniq_reference_code (reference_code),
+    CONSTRAINT fk_proforma_reference_invoice FOREIGN KEY (proforma_invoice_id) REFERENCES proforma_invoices(id) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 CREATE TABLE IF NOT EXISTS proforma_invoice_products (
