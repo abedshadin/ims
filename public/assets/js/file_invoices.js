@@ -394,20 +394,20 @@ document.addEventListener('DOMContentLoaded', () => {
         return `
             body { font-family: 'Times New Roman', serif; background: #fff; color: #1f2933; margin: 0; padding: 0; }
             @page { size: A4; margin: 0; }
-            .page { width: 8.27in; height: 11.69in; margin: 0 auto; padding: 0.5in 0.7in 0.45in; box-sizing: border-box; display: flex; flex-direction: column; justify-content: space-between; overflow: hidden; }
+            .page { width: 8.27in; height: 11.69in; margin: 0 auto; padding: 0.35in 0.6in 0.35in; box-sizing: border-box; display: flex; flex-direction: column; justify-content: space-between; overflow: hidden; }
             .page-header, .page-footer { text-align: center; margin: 0; padding: 0; flex: 0 0 auto; }
             .page-header img, .page-footer img { display: block; width: 100%; height: auto; margin: 0; }
-            .page-content { flex: 1 1 auto; display: flex; flex-direction: column; justify-content: flex-start; margin: 0.5rem 0 0.75rem; font-size: 0.95rem; line-height: 1.6; }
+            .page-content { flex: 1 1 auto; display: flex; flex-direction: column; justify-content: flex-start; margin: 0.35rem 0 0.5rem; font-size: 0.92rem; line-height: 1.5; }
             .bank-letter-body .ref-no { font-weight: 600; margin-bottom: 0.35rem; }
-            .bank-letter-body .date { text-align: right; margin-bottom: 1.5rem; }
-            .bank-letter-body .address-block p { margin-bottom: 1.5rem; }
-            .bank-letter-body .subject { margin-top: 1.5rem; margin-bottom: 1.5rem; }
-            .closing { margin-top: 2.5rem; }
-            .sig-row { display: flex; justify-content: space-between; gap: 3rem; font-weight: 600; }
+            .bank-letter-body .date { text-align: left; margin-bottom: 1rem; }
+            .bank-letter-body .address-block p { margin-bottom: 1.1rem; }
+            .bank-letter-body .subject { margin-top: 1.2rem; margin-bottom: 1.2rem; }
+            .closing { margin-top: 2rem; }
+            .sig-row { display: flex; justify-content: space-between; gap: 2.5rem; font-weight: 600; }
             .sig { flex: 1; }
-            .doc-title { font-size: 1.2rem; font-weight: 700; text-align: center; margin-bottom: 1.5rem; text-transform: uppercase; }
+            .doc-title { font-size: 1.15rem; font-weight: 700; text-align: center; margin-bottom: 1rem; text-transform: uppercase; }
             ol { margin: 0; padding-left: 1.1rem; }
-            ol li { margin-bottom: 0.75rem; text-align: justify; }
+            ol li { margin-bottom: 0.55rem; text-align: justify; }
             .page-break { page-break-before: avoid; }
             a { color: inherit; }
             @media print {
@@ -1063,8 +1063,11 @@ document.addEventListener('DOMContentLoaded', () => {
 
     const renderProformaCard = (proforma) => {
         const metrics = calculateProformaMetrics(proforma);
+        const wrapper = document.createElement('div');
+        wrapper.className = 'col-12';
+
         const card = document.createElement('div');
-        card.className = 'workspace-section-card card mb-4';
+        card.className = 'workspace-section-card card shadow-sm border-0';
         card.dataset.piToken = proforma.token || '';
 
         const createdAt = proforma.created_at_human || '';
@@ -1079,54 +1082,62 @@ document.addEventListener('DOMContentLoaded', () => {
         const totalCnfDisplay = toCurrency(metrics.totalCnf);
 
         card.innerHTML = `
-            <div class="card-body">
-                <div class="d-flex flex-column flex-lg-row justify-content-between align-items-lg-start gap-4">
+            <div class="card-header bg-white border-0 pb-0">
+                <div class="d-flex flex-column flex-xl-row justify-content-between align-items-start align-items-xl-center gap-4">
                     <div class="flex-grow-1">
-                        <div class="d-flex flex-wrap align-items-center gap-3 mb-2">
+                        <div class="d-flex flex-wrap align-items-center gap-2 mb-1">
+                            <span class="badge rounded-pill text-bg-primary-subtle text-primary fw-semibold">PI</span>
                             <h2 class="h5 mb-0">Proforma ${escapeHtml(proforma.invoice_number || '')}</h2>
                             <span class="badge text-bg-light text-primary-emphasis">Freight $${escapeHtml(freightValue)}</span>
-                            ${piHeaderValue ? `<span class="badge text-bg-primary-subtle text-primary">Header: ${escapeHtml(piHeaderValue)}</span>` : ''}
+                            ${piHeaderValue ? `<span class="badge text-bg-info-subtle text-info">Header: ${escapeHtml(piHeaderValue)}</span>` : ''}
                         </div>
                         <p class="text-muted small mb-0">Created ${escapeHtml(createdAt)}</p>
                     </div>
-                    <div class="workspace-pi-actions w-100 w-lg-auto">
-                        <button class="btn btn-outline-primary" type="button" data-action="print-cnf" data-pi-token="${escapeHtml(proforma.token || '')}">C&amp;F Calc Print &amp; Preview</button>
-                        <button class="btn btn-outline-primary" type="button" data-action="print-bank-forwarding" data-pi-token="${escapeHtml(proforma.token || '')}">Bank Forwarding Print &amp; Preview</button>
-                        <button class="btn btn-outline-primary" type="button" data-action="print-toc" data-pi-token="${escapeHtml(proforma.token || '')}">ToC Print &amp; Preview</button>
-                        <button class="btn btn-primary" type="button" data-action="add-product" data-pi-token="${escapeHtml(proforma.token || '')}">Add Product</button>
+                    <div class="workspace-pi-actions d-flex flex-column flex-sm-row flex-wrap gap-2 w-100 w-xl-auto justify-content-xl-end">
+                        <button class="btn btn-outline-primary flex-fill" type="button" data-action="print-cnf" data-pi-token="${escapeHtml(proforma.token || '')}">C&amp;F Calc Print &amp; Preview</button>
+                        <button class="btn btn-outline-primary flex-fill" type="button" data-action="print-bank-forwarding" data-pi-token="${escapeHtml(proforma.token || '')}">Bank Forwarding Print &amp; Preview</button>
+                        <button class="btn btn-outline-primary flex-fill" type="button" data-action="print-toc" data-pi-token="${escapeHtml(proforma.token || '')}">ToC Print &amp; Preview</button>
+                        <button class="btn btn-primary flex-fill" type="button" data-action="add-product" data-pi-token="${escapeHtml(proforma.token || '')}">Add Product</button>
+                    </div>
+                </div>
+            </div>
+            <div class="card-body pt-4">
+                <div class="workspace-inline-control border rounded-3 p-3 d-flex flex-column flex-md-row align-items-md-center gap-3">
+                    <div class="d-flex align-items-center gap-2 flex-wrap">
+                        <div class="input-group input-group-sm">
+                            <span class="input-group-text">$</span>
+                            <input class="form-control" type="number" step="0.01" value="${escapeHtml(freightValue)}" data-freight-input>
+                        </div>
+                        <button class="btn btn-outline-primary btn-sm" type="button" data-action="save-freight" data-pi-token="${escapeHtml(proforma.token || '')}">Save Freight</button>
+                    </div>
+                    <small class="text-muted">Freight is automatically distributed by weight when calculating C&amp;F totals.</small>
+                </div>
+
+                <div class="card bg-light border-0 mt-3">
+                    <div class="card-body py-3">
+                        <div class="row g-3 align-items-end">
+                            <div class="col-lg-4">
+                                <label class="form-label text-uppercase small fw-semibold" for="pi_header_${escapeHtml(proforma.token || '')}">PI Header</label>
+                                <input class="form-control form-control-sm" type="text" id="pi_header_${escapeHtml(proforma.token || '')}" value="${escapeHtml(piHeaderValue)}" data-pi-header-input>
+                            </div>
+                            <div class="col-lg-4">
+                                <label class="form-label text-uppercase small fw-semibold">Bank Reference</label>
+                                <input class="form-control form-control-sm" type="text" value="${escapeHtml(reference.code)}" data-bank-reference readonly>
+                            </div>
+                            <div class="col-lg-3">
+                                <label class="form-label text-uppercase small fw-semibold" for="bank_ref_date_${escapeHtml(proforma.token || '')}">Bank Ref Date</label>
+                                <input class="form-control form-control-sm" type="date" id="bank_ref_date_${escapeHtml(proforma.token || '')}" value="${escapeHtml(reference.date)}" data-bank-ref-date>
+                                ${referenceDateFormatted ? `<div class="text-muted small mt-1">Saved as ${escapeHtml(referenceDateFormatted)}</div>` : ''}
+                            </div>
+                            <div class="col-lg-1 d-flex align-items-end">
+                                <button class="btn btn-outline-secondary w-100" type="button" data-action="save-pi-details" data-pi-token="${escapeHtml(proforma.token || '')}">Save</button>
+                            </div>
+                        </div>
+                        <div class="text-muted small mt-2">Bank letters append the PI header to “Opening L/C for Import”.</div>
                     </div>
                 </div>
 
-                <div class="workspace-inline-control">
-                    <div class="input-group input-group-sm">
-                        <span class="input-group-text">$</span>
-                        <input class="form-control" type="number" step="0.01" value="${escapeHtml(freightValue)}" data-freight-input>
-                    </div>
-                    <button class="btn btn-outline-primary btn-sm" type="button" data-action="save-freight" data-pi-token="${escapeHtml(proforma.token || '')}">Save Freight</button>
-                    <small>Freight is automatically distributed by weight when calculating C&amp;F.</small>
-                </div>
-
-                <div class="row row-cols-1 row-cols-lg-4 g-3 mt-3 align-items-end">
-                    <div class="col">
-                        <label class="form-label text-uppercase small fw-semibold" for="pi_header_${escapeHtml(proforma.token || '')}">PI Header</label>
-                        <input class="form-control form-control-sm" type="text" id="pi_header_${escapeHtml(proforma.token || '')}" value="${escapeHtml(piHeaderValue)}" data-pi-header-input>
-                    </div>
-                    <div class="col">
-                        <label class="form-label text-uppercase small fw-semibold">Bank Reference</label>
-                        <input class="form-control form-control-sm" type="text" value="${escapeHtml(reference.code)}" data-bank-reference readonly>
-                    </div>
-                    <div class="col">
-                        <label class="form-label text-uppercase small fw-semibold" for="bank_ref_date_${escapeHtml(proforma.token || '')}">Bank Ref Date</label>
-                        <input class="form-control form-control-sm" type="date" id="bank_ref_date_${escapeHtml(proforma.token || '')}" value="${escapeHtml(reference.date)}" data-bank-ref-date>
-                        ${referenceDateFormatted ? `<div class="text-muted small mt-1">Saved as ${escapeHtml(referenceDateFormatted)}</div>` : ''}
-                    </div>
-                    <div class="col d-flex align-items-end">
-                        <button class="btn btn-outline-secondary w-100" type="button" data-action="save-pi-details" data-pi-token="${escapeHtml(proforma.token || '')}">Save Details</button>
-                    </div>
-                </div>
-                <div class="text-muted small mt-2">Bank letters append the PI header to “Opening L/C for Import”.</div>
-
-                <div class="workspace-stat-grid">
+                <div class="workspace-stat-grid mt-3">
                     <div class="workspace-stat">
                         <span class="workspace-stat-label">Products</span>
                         <span class="workspace-stat-value">${metrics.lines.length}</span>
@@ -1172,6 +1183,8 @@ document.addEventListener('DOMContentLoaded', () => {
             </div>
         `;
 
+        wrapper.append(card);
+
         const tbody = card.querySelector(`[data-products-for="${escapeSelector(proforma.token || '')}"]`);
 
         if (tbody) {
@@ -1194,8 +1207,9 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         }
 
-        return card;
+        return wrapper;
     };
+;;
 
     const deletePiProduct = async (piToken, productToken) => {
         const formData = new FormData();
