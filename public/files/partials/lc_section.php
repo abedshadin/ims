@@ -13,11 +13,12 @@ $expiryDate = $lcDetails['expiry_date'] ?? '';
 $expiryDateHuman = $lcDetails['expiry_date_human'] ?? '';
 $hasLcDetails = $lcNumber !== '';
 ?>
-<div class="card shadow-sm border-0">
-    <div class="card-body p-4">
+<div class="workspace-section-card card">
+    <div class="card-body">
         <div class="row g-4">
             <div class="col-xl-7">
-                <h2 class="h5 mb-3">Record Letter of Credit Details</h2>
+                <h2 class="workspace-section-title mb-1">Record Letter of Credit Details</h2>
+                <p class="workspace-section-subtitle mb-4">Capture the LC information that appears on bank documents and proforma correspondence.</p>
                 <form id="lcForm" method="post" class="row g-3" novalidate>
                     <input type="hidden" name="file_token" value="<?php echo e($fileToken); ?>">
                     <div class="col-md-6">
@@ -61,13 +62,13 @@ $hasLcDetails = $lcNumber !== '';
                 </form>
             </div>
             <div class="col-xl-5">
-                <div class="bg-body-secondary rounded p-4 h-100" id="lcSummary">
+                <div class="workspace-side-card" id="lcSummary">
                     <div class="d-flex justify-content-between align-items-start mb-3">
                         <div>
                             <h3 class="h6 mb-1">Saved Details</h3>
                             <p class="text-muted small mb-0">Keep your LC information up to date for easy reference.</p>
                         </div>
-                        <span class="badge text-bg-light text-muted">LC</span>
+                        <span class="badge">LC</span>
                     </div>
                     <dl class="row row-cols-1 gy-2 mb-0 small">
                         <div class="col">

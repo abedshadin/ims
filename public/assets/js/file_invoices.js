@@ -394,10 +394,10 @@ document.addEventListener('DOMContentLoaded', () => {
         return `
             body { font-family: 'Times New Roman', serif; background: #fff; color: #1f2933; margin: 0; padding: 0; }
             @page { size: A4; margin: 0; }
-            .page { width: 8.27in; min-height: 11.69in; margin: 0 auto; padding: 1.1in 0.9in 1.2in; box-sizing: border-box; position: relative; }
-            .page-header, .page-footer { text-align: center; }
-            .page-header img, .page-footer img { max-width: 100%; height: auto; }
-            .page-content { margin-top: 1.5rem; font-size: 0.95rem; line-height: 1.6; }
+            .page { width: 8.27in; min-height: 11.69in; margin: 0 auto; padding: 0.65in 0.75in 0.7in; box-sizing: border-box; position: relative; }
+            .page-header, .page-footer { text-align: center; margin: 0; padding: 0; }
+            .page-header img, .page-footer img { display: block; width: 100%; height: auto; margin: 0; }
+            .page-content { margin-top: 0.9rem; font-size: 0.95rem; line-height: 1.6; }
             .bank-letter-body .ref-no { font-weight: 600; margin-bottom: 0.35rem; }
             .bank-letter-body .date { text-align: right; margin-bottom: 1.5rem; }
             .bank-letter-body .address-block p { margin-bottom: 1.5rem; }
@@ -955,7 +955,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const freightShareDisplay = toCurrency(line.freightShare || 0);
         const cnfPerUnitDisplay = toCurrency(line.cnfPerUnit || 0);
         const cnfTotalDisplay = toCurrency(line.cnfTotal || 0);
-        const totalWeightDisplay = formatWeight(line.lineWeight);
+        const lineWeightDisplay = formatWeight(line.lineWeight);
         const row = document.createElement('tr');
         const productToken = product.token || '';
         const canDelete = productToken !== '';
@@ -966,7 +966,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 <div class="fw-semibold">${escapeHtml(product.product_name || '')}</div>
                 <div class="text-muted small">${escapeHtml(product.brand || '')}</div>
                 ${canDelete
-                    ? `<div class="mt-2"><button class="btn btn-danger btn-sm" type="button" data-action="delete-product" data-pi-token="${escapeHtml(metrics.piToken || '')}" data-product-token="${escapeHtml(productToken)}">Remove Product</button></div>`
+                    ? `<div class="mt-2"><button class="btn btn-outline-danger btn-sm" type="button" data-action="delete-product" data-pi-token="${escapeHtml(metrics.piToken || '')}" data-product-token="${escapeHtml(productToken)}">Remove Product</button></div>`
                     : '<div class="mt-2 text-muted small">Not removable</div>'}
             </td>
             <td>
@@ -977,7 +977,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 <div>${escapeHtml(product.product_size || '')}</div>
                 <div class="text-muted small">Unit: ${escapeHtml(product.unit || '')}</div>
                 <div class="text-muted small">Unit Wt: ${escapeHtml(product.item_weight || '')}</div>
-                <div class="text-muted small">Total Wt: ${escapeHtml(totalWeightDisplay)}</div>
+                <div class="text-muted small">Total Wt: ${escapeHtml(lineWeightDisplay)}</div>
             </td>
             <td class="text-end">
                 <div class="fw-semibold">$${escapeHtml(product.rate_formatted || toCurrency(product.rate || '0'))}</div>
@@ -1064,7 +1064,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const renderProformaCard = (proforma) => {
         const metrics = calculateProformaMetrics(proforma);
         const card = document.createElement('div');
-        card.className = 'card shadow-sm border-0 mb-4';
+        card.className = 'workspace-section-card card mb-4';
         card.dataset.piToken = proforma.token || '';
 
         const createdAt = proforma.created_at_human || '';
@@ -1072,60 +1072,85 @@ document.addEventListener('DOMContentLoaded', () => {
         const reference = normaliseReference(proforma.reference);
         const referenceDateFormatted = reference.date_formatted
             || (reference.date ? formatDate(reference.date, { day: '2-digit', month: 'short', year: 'numeric' }) : '');
+        const freightValue = toCurrency(proforma.freight_amount || metrics.totalFreight || 0);
+        const totalWeightDisplay = formatWeight(metrics.totalWeight);
+        const freightPerWeightDisplay = parseNumber(metrics.freightPerWeight).toFixed(4);
+        const totalFobDisplay = toCurrency(metrics.totalFob);
+        const totalCnfDisplay = toCurrency(metrics.totalCnf);
 
         card.innerHTML = `
-            <div class="card-body p-4">
-                <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-start gap-3">
-                    <div>
-                        <h3 class="h5 mb-1">Proforma Invoice ${escapeHtml(proforma.invoice_number || '')}</h3>
-                        <p class="text-muted small mb-2">Created ${escapeHtml(createdAt)}</p>
-                        <div class="input-group input-group-sm" style="max-width: 22rem;">
-                            <span class="input-group-text">$</span>
-                            <input class="form-control" type="number" step="0.01" value="${escapeHtml(toCurrency(proforma.freight_amount || metrics.totalFreight || 0))}" data-freight-input>
-                            <button class="btn btn-outline-primary" type="button" data-action="save-freight" data-pi-token="${escapeHtml(proforma.token || '')}">Save Freight</button>
+            <div class="card-body">
+                <div class="d-flex flex-column flex-lg-row justify-content-between align-items-lg-start gap-4">
+                    <div class="flex-grow-1">
+                        <div class="d-flex flex-wrap align-items-center gap-3 mb-2">
+                            <h2 class="h5 mb-0">Proforma ${escapeHtml(proforma.invoice_number || '')}</h2>
+                            <span class="badge text-bg-light text-primary-emphasis">Freight $${escapeHtml(freightValue)}</span>
+                            ${piHeaderValue ? `<span class="badge text-bg-primary-subtle text-primary">Header: ${escapeHtml(piHeaderValue)}</span>` : ''}
                         </div>
-                        <div class="text-muted small mt-1">Freight is distributed by total weight for C&amp;F.</div>
-                        <div class="row row-cols-1 row-cols-lg-4 g-3 mt-3 align-items-end">
-                            <div class="col">
-                                <label class="form-label text-uppercase small fw-semibold" for="pi_header_${escapeHtml(proforma.token || '')}">PI Header</label>
-                                <input class="form-control form-control-sm" type="text" id="pi_header_${escapeHtml(proforma.token || '')}" value="${escapeHtml(piHeaderValue)}" data-pi-header-input>
-                            </div>
-                            <div class="col">
-                                <label class="form-label text-uppercase small fw-semibold">Bank Reference</label>
-                                <input class="form-control form-control-sm" type="text" value="${escapeHtml(reference.code)}" data-bank-reference readonly>
-                            </div>
-                            <div class="col">
-                                <label class="form-label text-uppercase small fw-semibold" for="bank_ref_date_${escapeHtml(proforma.token || '')}">Bank Ref Date</label>
-                                <input class="form-control form-control-sm" type="date" id="bank_ref_date_${escapeHtml(proforma.token || '')}" value="${escapeHtml(reference.date)}" data-bank-ref-date>
-                                ${referenceDateFormatted ? `<div class="text-muted small mt-1">Saved as ${escapeHtml(referenceDateFormatted)}</div>` : ''}
-                            </div>
-                            <div class="col d-flex align-items-end">
-                                <button class="btn btn-outline-secondary w-100" type="button" data-action="save-pi-details" data-pi-token="${escapeHtml(proforma.token || '')}">Save Details</button>
-                            </div>
-                        </div>
-                        <div class="text-muted small mt-2">Bank letters append the PI header to “Opening L/C for Import”.</div>
+                        <p class="text-muted small mb-0">Created ${escapeHtml(createdAt)}</p>
                     </div>
-                    <div class="d-flex flex-column align-items-md-end gap-2 w-100 w-md-auto">
-                        <div class="d-flex flex-wrap justify-content-md-end gap-2">
-                            <button class="btn btn-outline-primary" type="button" data-action="print-cnf" data-pi-token="${escapeHtml(proforma.token || '')}">
-                                C&amp;F Calc Print &amp; Preview
-                            </button>
-                            <button class="btn btn-outline-primary" type="button" data-action="print-bank-forwarding" data-pi-token="${escapeHtml(proforma.token || '')}">
-                                Bank Forwarding Print &amp; Preview
-                            </button>
-                            <button class="btn btn-outline-primary" type="button" data-action="print-toc" data-pi-token="${escapeHtml(proforma.token || '')}">
-                                ToC Print &amp; Preview
-                            </button>
-                        </div>
-                        <div class="d-flex flex-wrap justify-content-md-end gap-2">
-                            <button class="btn btn-primary" type="button" data-action="add-product" data-pi-token="${escapeHtml(proforma.token || '')}">
-                                Add Product
-                            </button>
-                        </div>
+                    <div class="workspace-pi-actions w-100 w-lg-auto">
+                        <button class="btn btn-outline-primary" type="button" data-action="print-cnf" data-pi-token="${escapeHtml(proforma.token || '')}">C&amp;F Calc Print &amp; Preview</button>
+                        <button class="btn btn-outline-primary" type="button" data-action="print-bank-forwarding" data-pi-token="${escapeHtml(proforma.token || '')}">Bank Forwarding Print &amp; Preview</button>
+                        <button class="btn btn-outline-primary" type="button" data-action="print-toc" data-pi-token="${escapeHtml(proforma.token || '')}">ToC Print &amp; Preview</button>
+                        <button class="btn btn-primary" type="button" data-action="add-product" data-pi-token="${escapeHtml(proforma.token || '')}">Add Product</button>
                     </div>
                 </div>
+
+                <div class="workspace-inline-control">
+                    <div class="input-group input-group-sm">
+                        <span class="input-group-text">$</span>
+                        <input class="form-control" type="number" step="0.01" value="${escapeHtml(freightValue)}" data-freight-input>
+                    </div>
+                    <button class="btn btn-outline-primary btn-sm" type="button" data-action="save-freight" data-pi-token="${escapeHtml(proforma.token || '')}">Save Freight</button>
+                    <small>Freight is automatically distributed by weight when calculating C&amp;F.</small>
+                </div>
+
+                <div class="row row-cols-1 row-cols-lg-4 g-3 mt-3 align-items-end">
+                    <div class="col">
+                        <label class="form-label text-uppercase small fw-semibold" for="pi_header_${escapeHtml(proforma.token || '')}">PI Header</label>
+                        <input class="form-control form-control-sm" type="text" id="pi_header_${escapeHtml(proforma.token || '')}" value="${escapeHtml(piHeaderValue)}" data-pi-header-input>
+                    </div>
+                    <div class="col">
+                        <label class="form-label text-uppercase small fw-semibold">Bank Reference</label>
+                        <input class="form-control form-control-sm" type="text" value="${escapeHtml(reference.code)}" data-bank-reference readonly>
+                    </div>
+                    <div class="col">
+                        <label class="form-label text-uppercase small fw-semibold" for="bank_ref_date_${escapeHtml(proforma.token || '')}">Bank Ref Date</label>
+                        <input class="form-control form-control-sm" type="date" id="bank_ref_date_${escapeHtml(proforma.token || '')}" value="${escapeHtml(reference.date)}" data-bank-ref-date>
+                        ${referenceDateFormatted ? `<div class="text-muted small mt-1">Saved as ${escapeHtml(referenceDateFormatted)}</div>` : ''}
+                    </div>
+                    <div class="col d-flex align-items-end">
+                        <button class="btn btn-outline-secondary w-100" type="button" data-action="save-pi-details" data-pi-token="${escapeHtml(proforma.token || '')}">Save Details</button>
+                    </div>
+                </div>
+                <div class="text-muted small mt-2">Bank letters append the PI header to “Opening L/C for Import”.</div>
+
+                <div class="workspace-stat-grid">
+                    <div class="workspace-stat">
+                        <span class="workspace-stat-label">Products</span>
+                        <span class="workspace-stat-value">${metrics.lines.length}</span>
+                    </div>
+                    <div class="workspace-stat">
+                        <span class="workspace-stat-label">Total Weight</span>
+                        <span class="workspace-stat-value">${escapeHtml(totalWeightDisplay)}</span>
+                    </div>
+                    <div class="workspace-stat">
+                        <span class="workspace-stat-label">Freight / Weight</span>
+                        <span class="workspace-stat-value">$${escapeHtml(freightPerWeightDisplay)}</span>
+                    </div>
+                    <div class="workspace-stat">
+                        <span class="workspace-stat-label">Total FOB</span>
+                        <span class="workspace-stat-value">$${escapeHtml(totalFobDisplay)}</span>
+                    </div>
+                    <div class="workspace-stat">
+                        <span class="workspace-stat-label">Total C&amp;F</span>
+                        <span class="workspace-stat-value">$${escapeHtml(totalCnfDisplay)}</span>
+                    </div>
+                </div>
+
                 <div class="table-responsive mt-4">
-                    <table class="table table-sm align-middle mb-0">
+                    <table class="table table-sm table-hover align-middle mb-0 workspace-product-table">
                         <thead class="table-light">
                             <tr>
                                 <th scope="col">Product</th>
@@ -1133,7 +1158,7 @@ document.addEventListener('DOMContentLoaded', () => {
                                 <th scope="col">Size &amp; Unit</th>
                                 <th scope="col" class="text-end">Unit Rate</th>
                                 <th scope="col" class="text-end">DEC &amp; HS</th>
-                                <th scope="col" class="text-end">Assesment</th>
+                                <th scope="col" class="text-end">Assessment</th>
                                 <th scope="col" class="text-end">Quantity &amp; FOB</th>
                                 <th scope="col" class="text-end">C&amp;F Summary</th>
                             </tr>
@@ -1144,37 +1169,29 @@ document.addEventListener('DOMContentLoaded', () => {
                 <p class="text-muted small mt-3 ${metrics.lines.length ? 'd-none' : ''}" data-empty-state-for="${escapeHtml(proforma.token || '')}">
                     No products have been added to this proforma invoice yet.
                 </p>
-                <div class="row row-cols-1 row-cols-md-2 row-cols-lg-5 g-3 mt-3">
-                    <div class="col">
-                        <div class="text-muted text-uppercase small">Freight</div>
-                        <div class="fw-semibold">$${toCurrency(metrics.totalFreight)}</div>
-                    </div>
-                    <div class="col">
-                        <div class="text-muted text-uppercase small">Total Weight</div>
-                        <div class="fw-semibold">${formatWeight(metrics.totalWeight)}</div>
-                    </div>
-                    <div class="col">
-                        <div class="text-muted text-uppercase small">Freight / Weight</div>
-                        <div class="fw-semibold">$${toCurrency(metrics.freightPerWeight)}</div>
-                    </div>
-                    <div class="col">
-                        <div class="text-muted text-uppercase small">Total FOB</div>
-                        <div class="fw-semibold">$${toCurrency(metrics.totalFob)}</div>
-                    </div>
-                    <div class="col">
-                        <div class="text-muted text-uppercase small">Total C&amp;F</div>
-                        <div class="fw-semibold">$${toCurrency(metrics.totalCnf)}</div>
-                    </div>
-                </div>
             </div>
         `;
 
         const tbody = card.querySelector(`[data-products-for="${escapeSelector(proforma.token || '')}"]`);
 
-        if (tbody && metrics.lines.length) {
-            metrics.lines.forEach((line) => {
-                tbody.append(renderProductRow(line, metrics));
-            });
+        if (tbody) {
+            if (metrics.lines.length) {
+                metrics.lines.forEach((line) => {
+                    tbody.append(renderProductRow(line, metrics));
+                });
+            } else {
+                const emptyRow = document.createElement('tr');
+                emptyRow.innerHTML = `
+                    <td colspan="8" class="text-center text-muted py-5">
+                        <div class="workspace-empty-state bg-transparent border-0 shadow-none p-0">
+                            <div class="emoji">📦</div>
+                            <p class="lead mb-1">No products yet</p>
+                            <p class="text-muted mb-0">Use the “Add Product” button to attach vendor items or create new ones.</p>
+                        </div>
+                    </td>
+                `;
+                tbody.append(emptyRow);
+            }
         }
 
         return card;

@@ -5,3 +5,245 @@ body {
 .card {
     border: none;
 }
+
+.workspace-shell {
+    max-width: 1180px;
+    margin: 0 auto;
+}
+
+.workspace-page-header {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: space-between;
+    align-items: center;
+    gap: 1rem;
+    margin-bottom: 1.5rem;
+}
+
+.workspace-page-header .workspace-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.75rem;
+}
+
+.workspace-hero {
+    position: relative;
+    overflow: hidden;
+    border-radius: 1.5rem;
+    background: linear-gradient(140deg, #0d6efd 0%, #4c6ef5 45%, #7950f2 100%);
+    color: #fff;
+    padding: 2.5rem;
+    box-shadow: 0 24px 48px rgba(15, 23, 42, 0.18);
+}
+
+.workspace-hero::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: radial-gradient(circle at top right, rgba(255, 255, 255, 0.2), transparent 55%);
+    opacity: 0.75;
+}
+
+.workspace-hero__content {
+    position: relative;
+    z-index: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+}
+
+.workspace-hero__row {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: space-between;
+    gap: 1.5rem;
+}
+
+.workspace-hero__title {
+    font-size: 1.9rem;
+    font-weight: 600;
+    margin-bottom: 0.25rem;
+}
+
+.workspace-hero__subtitle {
+    font-size: 1rem;
+    color: rgba(255, 255, 255, 0.75);
+    margin-bottom: 0.75rem;
+}
+
+.workspace-hero__chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+}
+
+.workspace-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.45rem;
+    padding: 0.45rem 0.95rem;
+    border-radius: 999px;
+    background-color: rgba(255, 255, 255, 0.2);
+    color: #fff;
+    font-size: 0.85rem;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    backdrop-filter: blur(2px);
+}
+
+.workspace-chip strong {
+    font-weight: 700;
+}
+
+.workspace-meta {
+    text-align: right;
+    font-size: 0.85rem;
+    color: rgba(255, 255, 255, 0.85);
+}
+
+.workspace-meta div + div {
+    margin-top: 0.35rem;
+}
+
+.workspace-section-card {
+    border-radius: 1.25rem;
+    background-color: #fff;
+    box-shadow: 0 18px 40px rgba(15, 23, 42, 0.08);
+}
+
+.workspace-section-card > .card-body {
+    padding: 2.25rem;
+}
+
+.workspace-section-title {
+    font-weight: 600;
+    font-size: 1.2rem;
+    margin-bottom: 0.35rem;
+}
+
+.workspace-section-subtitle {
+    color: #6b7280;
+    margin-bottom: 0;
+}
+
+.workspace-stat-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+    gap: 0.95rem;
+    margin-top: 1.5rem;
+}
+
+.workspace-stat {
+    padding: 1rem 1.1rem;
+    border-radius: 0.9rem;
+    background: linear-gradient(135deg, rgba(13, 110, 253, 0.08), rgba(121, 80, 242, 0.05));
+    border: 1px solid rgba(13, 110, 253, 0.05);
+}
+
+.workspace-stat-label {
+    display: block;
+    font-size: 0.75rem;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    color: #6b7280;
+    margin-bottom: 0.35rem;
+}
+
+.workspace-stat-value {
+    font-size: 1.15rem;
+    font-weight: 600;
+    color: #0f172a;
+}
+
+.workspace-inline-control {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.75rem;
+    align-items: center;
+    margin-top: 1.25rem;
+    padding: 1rem;
+    border-radius: 0.9rem;
+    background-color: #f8f9ff;
+    border: 1px solid rgba(13, 110, 253, 0.1);
+}
+
+.workspace-inline-control .input-group {
+    max-width: 220px;
+}
+
+.workspace-inline-control small {
+    color: #6b7280;
+}
+
+.workspace-pi-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.75rem;
+    justify-content: flex-end;
+}
+
+.workspace-empty-state {
+    background: #fff;
+    border-radius: 1.25rem;
+    padding: 3rem 1rem;
+    border: 1px dashed rgba(15, 23, 42, 0.15);
+    box-shadow: 0 18px 35px rgba(15, 23, 42, 0.06);
+}
+
+.workspace-empty-state .emoji {
+    font-size: 2.75rem;
+    margin-bottom: 0.5rem;
+}
+
+.workspace-product-table thead th {
+    font-size: 0.75rem;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    color: #6b7280;
+}
+
+.workspace-product-table tbody td {
+    vertical-align: top;
+    font-size: 0.92rem;
+}
+
+.workspace-side-card {
+    background: #0f172a;
+    background: linear-gradient(160deg, #1f2937, #0f172a);
+    color: rgba(255, 255, 255, 0.85);
+    border-radius: 1.1rem;
+    padding: 2rem;
+    height: 100%;
+    box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.08);
+}
+
+.workspace-side-card h3 {
+    color: #fff;
+}
+
+.workspace-side-card .badge {
+    background: rgba(255, 255, 255, 0.1);
+    color: #fff;
+}
+
+.workspace-side-card dt {
+    color: rgba(255, 255, 255, 0.55);
+}
+
+.workspace-side-card dd {
+    color: #fff;
+}
+
+@media (max-width: 767.98px) {
+    .workspace-hero {
+        padding: 2rem;
+    }
+
+    .workspace-section-card > .card-body {
+        padding: 1.75rem;
+    }
+
+    .workspace-inline-control {
+        padding: 0.85rem;
+    }
+}

@@ -259,20 +259,25 @@ if ($file !== null) {
     <link rel="stylesheet" href="../assets/css/styles.css">
 </head>
 <body class="bg-body-tertiary">
-<div class="container py-5" id="fileInvoicesApp">
-    <div class="d-flex justify-content-between align-items-center flex-wrap gap-3 mb-4">
-        <div>
-            <a class="btn btn-link px-0" href="create.php">&#8592; Create Another File</a>
-            <h1 class="h3 mb-1 mt-2">File Workspace</h1>
-            <p class="text-muted mb-0">Capture proforma invoices, LC details, and attach product information for your shipment file.</p>
+<div class="container py-5">
+    <div class="workspace-shell" id="fileInvoicesApp">
+        <div class="workspace-page-header">
+            <div>
+                <p class="text-uppercase text-muted small fw-semibold mb-2">Workspace</p>
+                <h1 class="display-6 fw-semibold mb-2">File Workspace</h1>
+                <p class="text-muted mb-3">Manage proforma invoices, letter of credit details, and catalogued products for this file in one streamlined view.</p>
+                <div class="workspace-actions">
+                    <a class="btn btn-outline-secondary" href="index.php">&larr; Back to Files</a>
+                    <a class="btn btn-primary" href="create.php">Create Another File</a>
+                </div>
+            </div>
+            <div class="text-end">
+                <?php if ($currentUserName): ?>
+                    <div class="fw-semibold">Signed in as <?php echo e($currentUserName); ?></div>
+                <?php endif; ?>
+                <a class="btn btn-outline-secondary btn-sm mt-2" href="../auth/logout.php?redirect=<?php echo urlencode($_SERVER['REQUEST_URI'] ?? '/files/show.php'); ?>">Sign Out</a>
+            </div>
         </div>
-        <div class="text-end">
-            <?php if ($currentUserName): ?>
-                <div class="fw-semibold">Signed in as <?php echo e($currentUserName); ?></div>
-            <?php endif; ?>
-            <a class="btn btn-outline-secondary btn-sm mt-2" href="../auth/logout.php?redirect=<?php echo urlencode($_SERVER['REQUEST_URI'] ?? '/files/show.php'); ?>">Sign Out</a>
-        </div>
-    </div>
 
     <?php if ($loadError !== null): ?>
         <div class="alert alert-danger" role="alert"><?php echo e($loadError); ?></div>
@@ -310,6 +315,7 @@ if ($file !== null) {
 
         <?php include __DIR__ . '/partials/product_modal.php'; ?>
     <?php endif; ?>
+    </div>
 </div>
 
 <script id="fileInvoicesData" type="application/json"><?php echo htmlspecialchars($initialDataJson, ENT_NOQUOTES, 'UTF-8'); ?></script>
