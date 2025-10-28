@@ -105,8 +105,9 @@ try {
 
     echo json_encode([
         'status' => 'success',
-        'message' => 'Freight updated.',
+        'message' => 'Freight saved.',
         'freight_amount' => number_format($freight, 2, '.', ''),
+        'freight_amount_formatted' => number_format($freight, 2),
         'file_meta' => $fileMeta,
     ]);
 } catch (PDOException $exception) {

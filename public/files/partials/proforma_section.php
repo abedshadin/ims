@@ -78,13 +78,19 @@
         ?>
         <div class="card shadow-sm border-0 mb-4" data-pi-card="<?php echo e($piToken); ?>">
             <div class="card-body p-4">
-                <div class="d-flex flex-column flex-lg-row justify-content-between align-items-lg-center gap-3">
-                    <div>
-                        <div class="d-flex align-items-center gap-3">
+                <div class="d-flex flex-column flex-lg-row justify-content-between align-items-lg-start gap-3">
+                    <div class="flex-grow-1">
+                        <div class="d-flex align-items-center gap-3 flex-wrap">
                             <h2 class="h5 mb-0">Invoice <?php echo e($proforma['invoice_number'] ?? ''); ?></h2>
                             <span class="badge text-bg-info-subtle text-info fw-normal">Freight $<?php echo e(number_format($freightAmount, 2)); ?></span>
                         </div>
                         <p class="text-muted small mb-0">Created <?php echo e($proforma['created_at_human'] ?? ''); ?></p>
+                        <div class="input-group input-group-sm mt-3" style="max-width: 22rem;">
+                            <span class="input-group-text">$</span>
+                            <input class="form-control" type="number" step="0.01" value="<?php echo e(number_format($freightAmount, 2, '.', '')); ?>" data-freight-input>
+                            <button class="btn btn-outline-primary" type="button" data-action="save-freight" data-pi-token="<?php echo e($piToken); ?>">Save Freight</button>
+                        </div>
+                        <div class="text-muted small mt-1">Freight is distributed by total weight when calculating C&amp;F.</div>
                     </div>
                     <div class="d-flex flex-column align-items-lg-end gap-2 w-100 w-lg-auto">
                         <div class="d-flex flex-wrap justify-content-lg-end gap-2">
@@ -99,9 +105,6 @@
                             </button>
                         </div>
                         <div class="d-flex flex-wrap justify-content-lg-end gap-2">
-                            <button class="btn btn-outline-secondary" type="button" data-action="edit-freight" data-pi-token="<?php echo e($piToken); ?>">
-                                Update Freight
-                            </button>
                             <button class="btn btn-primary" type="button" data-action="add-product" data-pi-token="<?php echo e($piToken); ?>">
                                 Add Product
                             </button>

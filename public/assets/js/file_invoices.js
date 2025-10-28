@@ -205,15 +205,8 @@ document.addEventListener('DOMContentLoaded', () => {
     };
 
     const openPrintPreview = (title, content) => {
-        const printWindow = window.open('', '_blank', 'noopener,width=1000,height=720');
-
-        if (!printWindow) {
-            return false;
-        }
-
         const styles = buildPrintStyles();
-
-        printWindow.document.write(`
+        const html = `
             <!DOCTYPE html>
             <html lang="en">
                 <head>
@@ -229,9 +222,24 @@ document.addEventListener('DOMContentLoaded', () => {
                     ${content}
                 </body>
             </html>
-        `);
+        `;
 
-        printWindow.document.close();
+        const blob = new Blob([html], { type: 'text/html' });
+        const url = URL.createObjectURL(blob);
+        const previewWindow = window.open(url, '_blank', 'noopener');
+
+        if (!previewWindow) {
+            URL.revokeObjectURL(url);
+            return false;
+        }
+
+        const revoke = () => {
+            URL.revokeObjectURL(url);
+        };
+
+        previewWindow.addEventListener('load', revoke, { once: true });
+        setTimeout(revoke, 30000);
+        previewWindow.focus();
         return true;
     };
 
@@ -741,9 +749,6 @@ document.addEventListener('DOMContentLoaded', () => {
                             </button>
                         </div>
                         <div class="d-flex flex-wrap justify-content-md-end gap-2">
-                            <button class="btn btn-outline-secondary" type="button" data-action="edit-freight" data-pi-token="${escapeHtml(proforma.token || '')}">
-                                Update Freight
-                            </button>
                             <button class="btn btn-primary" type="button" data-action="add-product" data-pi-token="${escapeHtml(proforma.token || '')}">
                                 Add Product
                             </button>
@@ -1112,7 +1117,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     const opened = openPrintPreview(previewTitle, previewHtml);
 
                     if (!opened) {
-                        showAlert(piAlert, 'Pop-up blocked. Please enable pop-ups to preview prints.', 'warning');
+                        showAlert(piAlert, 'Preview blocked. Please allow new tabs for this site to open the document.', 'warning');
                     }
 
                     return;
@@ -1160,13 +1165,13 @@ document.addEventListener('DOMContentLoaded', () => {
                         }
 
                         if (!response.ok || result.status !== 'success') {
-                            throw new Error(result.message || 'Unable to update freight.');
+                            throw new Error(result.message || 'Unable to save freight.');
                         }
 
                         const pi = state.proformas.find((item) => item.token === piToken);
                         if (pi) {
                             pi.freight_amount = result.freight_amount;
-                            pi.freight_amount_formatted = result.freight_amount;
+                            pi.freight_amount_formatted = result.freight_amount_formatted || result.freight_amount;
                         }
 
                         if (result.file_meta) {
@@ -1174,7 +1179,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         }
 
                         refreshPiList();
-                        showAlert(piAlert, result.message || 'Freight updated.', 'success');
+                        showAlert(piAlert, result.message || 'Freight saved.', 'success');
                     } catch (error) {
                         showAlert(piAlert, error.message, 'danger');
                     } finally {
