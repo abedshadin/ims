@@ -3,7 +3,7 @@
         <div class="d-flex flex-column flex-lg-row justify-content-between align-items-lg-center gap-3">
             <div>
                 <h2 class="workspace-section-title mb-1">Add a Proforma Invoice</h2>
-                <p class="workspace-section-subtitle">Create a new proforma invoice entry and then attach products and freight information.</p>
+                <p class="workspace-section-subtitle">Capture the headline details below, then manage freight, products, and references inside each card.</p>
             </div>
         </div>
         <form id="createPiForm" class="row gy-3 mt-3" method="post" novalidate>
@@ -92,58 +92,63 @@
         $referenceDateFormatted = $referenceDate !== '' ? date('j M Y', strtotime($referenceDate)) : null;
         ?>
         <div class="workspace-section-card card mb-4" data-pi-token="<?php echo e($piToken); ?>">
-            <div class="card-body">
-                <div class="d-flex flex-column flex-lg-row justify-content-between align-items-lg-start gap-4">
-                    <div class="flex-grow-1">
-                        <div class="d-flex flex-wrap align-items-center gap-3 mb-2">
-                            <h2 class="h5 mb-0">Proforma <?php echo e($proforma['invoice_number'] ?? ''); ?></h2>
+            <div class="card-body p-4">
+                <div class="workspace-pi-header d-flex flex-column flex-xl-row justify-content-between align-items-start align-items-xl-center gap-4">
+                    <div class="workspace-pi-title flex-grow-1">
+                        <div class="d-flex flex-wrap align-items-center gap-2 mb-2">
+                            <span class="badge rounded-pill text-bg-primary-subtle text-primary fw-semibold">PI</span>
+                            <h2 class="h4 mb-0">Proforma <?php echo e($proforma['invoice_number'] ?? ''); ?></h2>
                             <span class="badge text-bg-light text-primary-emphasis">Freight $<?php echo e(number_format($freightAmount, 2)); ?></span>
                             <?php if ($piHeaderValue !== ''): ?>
-                                <span class="badge text-bg-primary-subtle text-primary">Header: <?php echo e($piHeaderValue); ?></span>
+                                <span class="badge text-bg-info-subtle text-info">Header: <?php echo e($piHeaderValue); ?></span>
                             <?php endif; ?>
                         </div>
                         <p class="text-muted small mb-0">Created <?php echo e($proforma['created_at_human'] ?? ''); ?></p>
                     </div>
-                    <div class="workspace-pi-actions w-100 w-lg-auto">
-                        <button class="btn btn-outline-primary" type="button" data-action="print-cnf" data-pi-token="<?php echo e($piToken); ?>">C&amp;F Calc Print &amp; Preview</button>
-                        <button class="btn btn-outline-primary" type="button" data-action="print-bank-forwarding" data-pi-token="<?php echo e($piToken); ?>">Bank Forwarding Print &amp; Preview</button>
-                        <button class="btn btn-outline-primary" type="button" data-action="print-toc" data-pi-token="<?php echo e($piToken); ?>">ToC Print &amp; Preview</button>
-                        <button class="btn btn-primary" type="button" data-action="add-product" data-pi-token="<?php echo e($piToken); ?>">Add Product</button>
+                    <div class="workspace-pi-actions d-flex flex-column flex-sm-row flex-wrap gap-2 w-100 w-xl-auto justify-content-xl-end">
+                        <button class="btn btn-outline-primary flex-fill" type="button" data-action="print-cnf" data-pi-token="<?php echo e($piToken); ?>">C&amp;F Calc Print &amp; Preview</button>
+                        <button class="btn btn-outline-primary flex-fill" type="button" data-action="print-bank-forwarding" data-pi-token="<?php echo e($piToken); ?>">Bank Forwarding Print &amp; Preview</button>
+                        <button class="btn btn-outline-primary flex-fill" type="button" data-action="print-toc" data-pi-token="<?php echo e($piToken); ?>">ToC Print &amp; Preview</button>
+                        <button class="btn btn-primary flex-fill" type="button" data-action="add-product" data-pi-token="<?php echo e($piToken); ?>">Add Product</button>
                     </div>
                 </div>
 
-                <div class="workspace-inline-control">
-                    <div class="input-group input-group-sm">
-                        <span class="input-group-text">$</span>
-                        <input class="form-control" type="number" step="0.01" value="<?php echo e(number_format($freightAmount, 2, '.', '')); ?>" data-freight-input>
+                <div class="workspace-inline-control border rounded-3 p-3 mt-3 d-flex flex-column flex-md-row align-items-md-center gap-3">
+                    <div class="flex-grow-1 d-flex align-items-center gap-2">
+                        <div class="input-group input-group-sm flex-grow-1 flex-md-grow-0" style="max-width: 220px;">
+                            <span class="input-group-text">$</span>
+                            <input class="form-control" type="number" step="0.01" value="<?php echo e(number_format($freightAmount, 2, '.', '')); ?>" data-freight-input>
+                        </div>
+                        <button class="btn btn-outline-primary btn-sm" type="button" data-action="save-freight" data-pi-token="<?php echo e($piToken); ?>">Save Freight</button>
                     </div>
-                    <button class="btn btn-outline-primary btn-sm" type="button" data-action="save-freight" data-pi-token="<?php echo e($piToken); ?>">Save Freight</button>
-                    <small>Freight is automatically distributed by weight when calculating C&amp;F.</small>
+                    <small class="text-muted">Freight is automatically distributed by weight when calculating C&amp;F totals.</small>
                 </div>
 
-                <div class="row row-cols-1 row-cols-lg-4 g-3 mt-3 align-items-end">
-                    <div class="col">
-                        <label class="form-label text-uppercase small fw-semibold" for="pi_header_<?php echo e($piToken); ?>">PI Header</label>
-                        <input class="form-control form-control-sm" type="text" id="pi_header_<?php echo e($piToken); ?>" value="<?php echo e($piHeaderValue); ?>" data-pi-header-input>
+                <div class="workspace-pi-detail border rounded-3 bg-body-tertiary p-3 mt-3">
+                    <div class="row g-3 align-items-end">
+                        <div class="col-lg-4">
+                            <label class="form-label text-uppercase small fw-semibold" for="pi_header_<?php echo e($piToken); ?>">PI Header</label>
+                            <input class="form-control form-control-sm" type="text" id="pi_header_<?php echo e($piToken); ?>" value="<?php echo e($piHeaderValue); ?>" data-pi-header-input>
+                        </div>
+                        <div class="col-lg-4">
+                            <label class="form-label text-uppercase small fw-semibold">Bank Reference</label>
+                            <input class="form-control form-control-sm" type="text" value="<?php echo e($referenceCode); ?>" data-bank-reference readonly>
+                        </div>
+                        <div class="col-lg-3">
+                            <label class="form-label text-uppercase small fw-semibold" for="bank_ref_date_<?php echo e($piToken); ?>">Bank Ref Date</label>
+                            <input class="form-control form-control-sm" type="date" id="bank_ref_date_<?php echo e($piToken); ?>" value="<?php echo e($referenceDate); ?>" data-bank-ref-date>
+                            <?php if ($referenceDateFormatted): ?>
+                                <div class="text-muted small mt-1">Saved as <?php echo e($referenceDateFormatted); ?></div>
+                            <?php endif; ?>
+                        </div>
+                        <div class="col-lg-2 col-xl-1 d-flex align-items-end">
+                            <button class="btn btn-outline-secondary w-100" type="button" data-action="save-pi-details" data-pi-token="<?php echo e($piToken); ?>">Save</button>
+                        </div>
                     </div>
-                    <div class="col">
-                        <label class="form-label text-uppercase small fw-semibold">Bank Reference</label>
-                        <input class="form-control form-control-sm" type="text" value="<?php echo e($referenceCode); ?>" data-bank-reference readonly>
-                    </div>
-                    <div class="col">
-                        <label class="form-label text-uppercase small fw-semibold" for="bank_ref_date_<?php echo e($piToken); ?>">Bank Ref Date</label>
-                        <input class="form-control form-control-sm" type="date" id="bank_ref_date_<?php echo e($piToken); ?>" value="<?php echo e($referenceDate); ?>" data-bank-ref-date>
-                        <?php if ($referenceDateFormatted): ?>
-                            <div class="text-muted small mt-1">Saved as <?php echo e($referenceDateFormatted); ?></div>
-                        <?php endif; ?>
-                    </div>
-                    <div class="col d-flex align-items-end">
-                        <button class="btn btn-outline-secondary w-100" type="button" data-action="save-pi-details" data-pi-token="<?php echo e($piToken); ?>">Save Details</button>
-                    </div>
+                    <div class="text-muted small mt-2">Bank letters append the PI header to “Opening L/C for Import”.</div>
                 </div>
-                <div class="text-muted small mt-2">Bank letters append the PI header to “Opening L/C for Import”.</div>
 
-                <div class="workspace-stat-grid">
+                <div class="workspace-stat-grid mt-3">
                     <div class="workspace-stat">
                         <span class="workspace-stat-label">Products</span>
                         <span class="workspace-stat-value"><?php echo e($productCount); ?></span>

@@ -394,10 +394,10 @@ document.addEventListener('DOMContentLoaded', () => {
         return `
             body { font-family: 'Times New Roman', serif; background: #fff; color: #1f2933; margin: 0; padding: 0; }
             @page { size: A4; margin: 0; }
-            .page { width: 8.27in; min-height: 11.69in; margin: 0 auto; padding: 0.65in 0.75in 0.7in; box-sizing: border-box; position: relative; }
-            .page-header, .page-footer { text-align: center; margin: 0; padding: 0; }
+            .page { width: 8.27in; height: 11.69in; margin: 0 auto; padding: 0.5in 0.7in 0.45in; box-sizing: border-box; display: flex; flex-direction: column; justify-content: space-between; overflow: hidden; }
+            .page-header, .page-footer { text-align: center; margin: 0; padding: 0; flex: 0 0 auto; }
             .page-header img, .page-footer img { display: block; width: 100%; height: auto; margin: 0; }
-            .page-content { margin-top: 0.9rem; font-size: 0.95rem; line-height: 1.6; }
+            .page-content { flex: 1 1 auto; display: flex; flex-direction: column; justify-content: flex-start; margin: 0.5rem 0 0.75rem; font-size: 0.95rem; line-height: 1.6; }
             .bank-letter-body .ref-no { font-weight: 600; margin-bottom: 0.35rem; }
             .bank-letter-body .date { text-align: right; margin-bottom: 1.5rem; }
             .bank-letter-body .address-block p { margin-bottom: 1.5rem; }
@@ -408,7 +408,7 @@ document.addEventListener('DOMContentLoaded', () => {
             .doc-title { font-size: 1.2rem; font-weight: 700; text-align: center; margin-bottom: 1.5rem; text-transform: uppercase; }
             ol { margin: 0; padding-left: 1.1rem; }
             ol li { margin-bottom: 0.75rem; text-align: justify; }
-            .page-break { page-break-before: always; }
+            .page-break { page-break-before: avoid; }
             a { color: inherit; }
             @media print {
                 body { background: #fff; padding: 0; }
@@ -704,7 +704,7 @@ document.addEventListener('DOMContentLoaded', () => {
             : `Please open irrevocable L/C through <strong>${escapeHtml(beneficiaryBank || 'Beneficiary Bank')}, SWIFT Code: ${escapeHtml(beneficiarySwift || 'N/A')}.</strong>`;
 
         return `
-            <div class="page page-break">
+            <div class="page">
                 <header class="page-header"><img src="header.jpg" alt="Header"></header>
                 <main class="page-content" role="main">
                     <div class="doc-title">Other Terms &amp; Conditions</div>
@@ -732,8 +732,8 @@ document.addEventListener('DOMContentLoaded', () => {
                         <li>E-TIN No. 892580838781, BIN No. 000002132-0101 must appear in the invoice and packing list.</li>
                         <li>The beneficiary must send the shipment advice to Reliance Insurance Ltd. at their E-mail ID: <a href="mailto:info@reliance.com.bd">info@reliance.com.bd</a>.</li>
                         ${lcToleranceEnabled ? `<li>L/C allows ${escapeHtml(`${lcTolerancePercentage}`)}% tolerance in amount &amp; qty.</li>` : ''}
-                    </ol><br><br>
-                    <div class="sig-row">
+                    </ol>
+                    <div class="sig-row" style="margin-top: 3rem;">
                         <div class="sig">Authorized Signature</div>
                         <div class="sig">Authorized Signature</div>
                     </div>
