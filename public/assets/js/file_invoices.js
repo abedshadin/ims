@@ -394,7 +394,7 @@ document.addEventListener('DOMContentLoaded', () => {
             :root { color-scheme: only light; }
             @page { size: A4; margin: 0; }
             body { font-family: 'Times New Roman', serif; background: #f8f9fa; color: #1f2933; margin: 0; padding: 0; }
-            .letter-page { width: 210mm; min-height: 297mm; max-height: 297mm; margin: 0 auto 2rem; background: #fff; box-sizing: border-box; padding: 18mm 20mm; display: flex; flex-direction: column; border: 1px solid #e9ecef; box-shadow: 0 0.5rem 1.5rem rgba(15, 23, 42, 0.08); overflow: hidden; }
+            .letter-page { width: 210mm; min-height: 297mm; max-height: 297mm; margin: 0 auto 1.5rem; background: #fff; box-sizing: border-box; padding: 16mm 18mm; display: flex; flex-direction: column; border: 1px solid #e9ecef; box-shadow: 0 0.5rem 1.5rem rgba(15, 23, 42, 0.08); overflow: hidden; }
             .letter-header, .letter-footer { flex: 0 0 auto; }
             .letter-header img, .letter-footer img { display: block; width: 100%; height: auto; }
             .letter-body { flex: 1 1 auto; display: flex; flex-direction: column; gap: 0.75rem; }
@@ -409,9 +409,8 @@ document.addEventListener('DOMContentLoaded', () => {
             ol li { margin-bottom: 0.55rem; text-align: justify; }
             @media print {
                 body { background: #fff; }
-                .letter-page { margin: 0 auto; box-shadow: none; border: none; page-break-after: always; }
-                .letter-page:last-child,
-                .letter-page:last-of-type { page-break-after: auto; }
+                .letter-page { margin: 0 auto; box-shadow: none; border: none; height: 297mm; max-height: 297mm; overflow: hidden; page-break-after: avoid; break-after: avoid; }
+                .letter-page + .letter-page { page-break-before: always; break-before: page; }
                 .print-actions { display: none !important; }
             }
         `;
