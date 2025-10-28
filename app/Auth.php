@@ -164,8 +164,32 @@ final class Auth
         return self::userId() !== null;
     }
 
-    public static function requireLogin(string $redirectPath = '/auth/login.php'): void
+    private static function resolvePublicPath(string $path): string
     {
+        $path = '/' . ltrim($path, '/');
+
+        $documentRoot = rtrim($_SERVER['DOCUMENT_ROOT'] ?? '', '/');
+
+        if ($documentRoot !== '') {
+            $target = $documentRoot . $path;
+
+            if (!is_file($target)) {
+                $publicTarget = $documentRoot . '/public' . $path;
+
+                if (is_file($publicTarget)) {
+                    return '/public' . $path;
+                }
+            }
+        }
+
+        return $path;
+    }
+
+    public static function requireLogin(?string $redirectPath = null): void
+    {
+        $redirectPath = $redirectPath ?? '/auth/login.php';
+        $redirectPath = self::resolvePublicPath($redirectPath);
+
         if (self::check()) {
             return;
         }
