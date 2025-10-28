@@ -155,6 +155,153 @@ document.addEventListener('DOMContentLoaded', () => {
         return `${sign}${number.toFixed(2)}%`;
     };
 
+    const bankDirectory = {
+        DBBL: {
+            name: 'Dutch-Bangla Bank Limited',
+            addressLines: ['47 Motijheel Commercial Area', 'Dhaka 1000', 'Bangladesh'],
+            accountNumber: '',
+        },
+        SCB: {
+            name: 'Standard Chartered Bank',
+            addressLines: ['67 Gulshan Avenue', 'Dhaka 1212', 'Bangladesh'],
+            accountNumber: '',
+        },
+        BBL: {
+            name: 'BRAC Bank Limited',
+            addressLines: ['1 Gulshan Avenue', 'Dhaka 1212', 'Bangladesh'],
+            accountNumber: '',
+        },
+    };
+
+    const parseDateValue = (value) => {
+        if (!value) {
+            return null;
+        }
+
+        if (value instanceof Date) {
+            return Number.isNaN(value.getTime()) ? null : value;
+        }
+
+        const stringValue = `${value}`.trim();
+
+        if (stringValue === '') {
+            return null;
+        }
+
+        const normalised = stringValue.replace(' ', 'T');
+        let date = new Date(normalised);
+
+        if (Number.isNaN(date.getTime())) {
+            date = new Date(`${normalised}Z`);
+        }
+
+        if (Number.isNaN(date.getTime())) {
+            return null;
+        }
+
+        return date;
+    };
+
+    const formatDate = (value, options) => {
+        const date = parseDateValue(value);
+
+        if (!date) {
+            return '';
+        }
+
+        try {
+            return date.toLocaleDateString('en-GB', options || { day: '2-digit', month: 'short', year: 'numeric' });
+        } catch (error) {
+            return '';
+        }
+    };
+
+    const numberWords = {
+        ones: ['Zero', 'One', 'Two', 'Three', 'Four', 'Five', 'Six', 'Seven', 'Eight', 'Nine', 'Ten', 'Eleven', 'Twelve', 'Thirteen', 'Fourteen', 'Fifteen', 'Sixteen', 'Seventeen', 'Eighteen', 'Nineteen'],
+        tens: ['', '', 'Twenty', 'Thirty', 'Forty', 'Fifty', 'Sixty', 'Seventy', 'Eighty', 'Ninety'],
+        scales: ['', 'Thousand', 'Million', 'Billion', 'Trillion'],
+    };
+
+    const convertHundreds = (number) => {
+        let words = '';
+        const hundreds = Math.floor(number / 100);
+        const remainder = number % 100;
+
+        if (hundreds > 0) {
+            words += `${numberWords.ones[hundreds]} Hundred`;
+            if (remainder > 0) {
+                words += ' ';
+            }
+        }
+
+        if (remainder > 0) {
+            if (remainder < 20) {
+                words += numberWords.ones[remainder];
+            } else {
+                const tens = Math.floor(remainder / 10);
+                const units = remainder % 10;
+                words += numberWords.tens[tens];
+                if (units > 0) {
+                    words += `-${numberWords.ones[units]}`;
+                }
+            }
+        }
+
+        return words;
+    };
+
+    const numberToWords = (value) => {
+        const number = Math.floor(Math.abs(value));
+
+        if (!Number.isFinite(number) || number === 0) {
+            return numberWords.ones[0];
+        }
+
+        let remaining = number;
+        let scaleIndex = 0;
+        const parts = [];
+
+        while (remaining > 0) {
+            const chunk = remaining % 1000;
+
+            if (chunk > 0) {
+                const chunkWords = convertHundreds(chunk);
+                const scaleWord = numberWords.scales[scaleIndex] || '';
+                parts.unshift(`${chunkWords}${scaleWord ? ` ${scaleWord}` : ''}`.trim());
+            }
+
+            remaining = Math.floor(remaining / 1000);
+            scaleIndex += 1;
+        }
+
+        return parts.join(' ').trim();
+    };
+
+    const currencyToWords = (value, currencyName = 'Dollars', centName = 'Cents') => {
+        const amount = parseNumber(value);
+        const absolute = Math.abs(amount);
+        const whole = Math.floor(absolute);
+        const fraction = Math.round((absolute - whole) * 100);
+
+        const wholeWords = numberToWords(whole);
+        let result = `${wholeWords} ${currencyName}`.trim();
+
+        if (fraction > 0) {
+            const centWords = numberToWords(fraction);
+            result = `${result} and ${centWords} ${centName}`;
+        }
+
+        return result || `${numberWords.ones[0]} ${currencyName}`;
+    };
+
+    const formatMultiline = (value) => {
+        if (!value) {
+            return '';
+        }
+
+        return escapeHtml(`${value}`).replace(/\r?\n/g, '<br>');
+    };
+
     const buildPrintStyles = () => {
         return `
             body { font-family: 'Segoe UI', Tahoma, sans-serif; color: #212529; background: #f8f9fa; margin: 0; padding: 2rem; }
@@ -175,6 +322,34 @@ document.addEventListener('DOMContentLoaded', () => {
             .muted { color: #6c757d; font-size: 0.85rem; }
             @media print {
                 body { background: #fff; padding: 0.5in; }
+                .print-actions { display: none; }
+            }
+        `;
+    };
+
+    const buildLetterStyles = () => {
+        return `
+            body { font-family: 'Times New Roman', serif; background: #fff; color: #1f2933; margin: 0; padding: 0; }
+            .page { width: 8.27in; min-height: 11.69in; margin: 0 auto; padding: 1.1in 0.9in 1.2in; box-sizing: border-box; position: relative; }
+            .page-header, .page-footer { text-align: center; }
+            .page-header img, .page-footer img { max-width: 100%; height: auto; }
+            .page-content { margin-top: 1.5rem; font-size: 0.95rem; line-height: 1.6; }
+            .bank-letter-body .ref-no { font-weight: 600; margin-bottom: 0.35rem; }
+            .bank-letter-body .date { text-align: right; margin-bottom: 1.5rem; }
+            .bank-letter-body .address-block p { margin-bottom: 1.5rem; }
+            .bank-letter-body .subject { margin-top: 1.5rem; margin-bottom: 1.5rem; }
+            .closing { margin-top: 2.5rem; }
+            .sig-row { display: flex; justify-content: space-between; gap: 3rem; font-weight: 600; }
+            .sig { flex: 1; }
+            .doc-title { font-size: 1.2rem; font-weight: 700; text-align: center; margin-bottom: 1.5rem; text-transform: uppercase; }
+            ol { margin: 0; padding-left: 1.1rem; }
+            ol li { margin-bottom: 0.75rem; text-align: justify; }
+            .page-break { page-break-before: always; }
+            a { color: inherit; }
+            @media print {
+                body { background: #fff; padding: 0; }
+                .page { page-break-after: always; box-shadow: none; }
+                .page:last-child { page-break-after: auto; }
                 .print-actions { display: none; }
             }
         `;
@@ -204,15 +379,24 @@ document.addEventListener('DOMContentLoaded', () => {
         `;
     };
 
-    const openPrintPreview = (title, content) => {
-        const styles = buildPrintStyles();
+    const openPrintPreview = (title, content, options = {}) => {
+        const baseStyles = buildPrintStyles();
+        const extraStyles = options.styles || '';
+        const baseHref = document.baseURI || window.location.href;
+        const previewWindow = window.open('', '_blank', 'noopener');
+
+        if (!previewWindow) {
+            return false;
+        }
+
         const html = `
             <!DOCTYPE html>
             <html lang="en">
                 <head>
                     <meta charset="utf-8">
                     <title>${title}</title>
-                    <style>${styles}</style>
+                    <base href="${baseHref}">
+                    <style>${baseStyles}${extraStyles}</style>
                 </head>
                 <body>
                     <div class="print-actions">
@@ -224,22 +408,11 @@ document.addEventListener('DOMContentLoaded', () => {
             </html>
         `;
 
-        const blob = new Blob([html], { type: 'text/html' });
-        const url = URL.createObjectURL(blob);
-        const previewWindow = window.open(url, '_blank', 'noopener');
-
-        if (!previewWindow) {
-            URL.revokeObjectURL(url);
-            return false;
-        }
-
-        const revoke = () => {
-            URL.revokeObjectURL(url);
-        };
-
-        previewWindow.addEventListener('load', revoke, { once: true });
-        setTimeout(revoke, 30000);
+        previewWindow.document.open();
+        previewWindow.document.write(html);
+        previewWindow.document.close();
         previewWindow.focus();
+
         return true;
     };
 
@@ -306,105 +479,185 @@ document.addEventListener('DOMContentLoaded', () => {
         const metrics = calculateProformaMetrics(proforma);
         const file = state.file || {};
 
-        let totalFreightShare = 0;
-        const rows = metrics.lines.map((line, index) => {
-            const freightShare = line.freightShare || 0;
-            totalFreightShare += freightShare;
+        const bankKey = (file.bank_name || '').toUpperCase();
+        const bankInfo = bankDirectory[bankKey] || {
+            name: file.bank_name || 'BANK NAME',
+            addressLines: [],
+            accountNumber: '',
+        };
 
-            return `
-                <tr>
-                    <td class="text-center">${index + 1}</td>
-                    <td>${escapeHtml(line.product.product_name || '')}</td>
-                    <td class="text-end">${formatQuantity(line.quantity)}</td>
-                    <td class="text-end">$${toCurrency(line.fobTotal)}</td>
-                    <td class="text-end">$${toCurrency(freightShare)}</td>
-                    <td class="text-end">$${toCurrency(line.cnfTotal || 0)}</td>
-                </tr>
-            `;
-        }).join('') || `
-            <tr>
-                <td colspan="6" class="text-center muted">No products available for this proforma invoice.</td>
-            </tr>
-        `;
+        const bankAddressLines = (bankInfo.addressLines || []).filter((line) => line && line.trim().length > 0);
+        const bankAddressHtml = bankAddressLines.length > 0
+            ? bankAddressLines.map((line) => `${escapeHtml(line)}<br>`).join('')
+            : 'Address Line 1<br>Address Line 2<br>Address Line 3';
+
+        const referenceNo = file.file_name || 'TFL/SCM/BANK/YEAR/XXX';
+        const today = formatDate(new Date(), { day: '2-digit', month: 'long', year: 'numeric' });
+        const vendorName = file.vendor_name || 'VENDOR NAME';
+        const vendorAddressHtml = formatMultiline(file.vendor_address || '') || 'VENDOR ADDRESS';
+        const subjectLine = `Opening L/C for Import of ${file.brand || 'Goods'}`;
+        const currencySymbol = 'US$';
+        const grandTotal = metrics.totalCnf;
+        const totalInWords = `${currencyToWords(grandTotal, 'US Dollars', 'Cents')} Only`;
+        const accountNumber = bankInfo.accountNumber || '';
 
         return `
-            ${renderPrintHeader('Bank Forwarding Summary', proforma, file)}
-            <table>
-                <thead>
-                    <tr>
-                        <th class="text-center" style="width: 8%">Serial No</th>
-                        <th>Product Name</th>
-                        <th class="text-end" style="width: 12%">Quantity</th>
-                        <th class="text-end" style="width: 18%">FOB Total</th>
-                        <th class="text-end" style="width: 18%">Freight Share</th>
-                        <th class="text-end" style="width: 18%">Total C&amp;F</th>
-                    </tr>
-                </thead>
-                <tbody>${rows}</tbody>
-                <tfoot>
-                    <tr>
-                        <td colspan="3" class="text-end">Totals</td>
-                        <td class="text-end">$${toCurrency(metrics.totalFob)}</td>
-                        <td class="text-end">$${toCurrency(totalFreightShare)}</td>
-                        <td class="text-end">$${toCurrency(metrics.totalCnf)}</td>
-                    </tr>
-                </tfoot>
-            </table>
-            <div class="muted">Summary prepared for bank forwarding documentation.</div>
+            <div class="page">
+                <header class="page-header"><img src="header.jpg" alt="Header"></header>
+                <main class="page-content bank-letter-body" role="main">
+                    <p class="ref-no">Ref: ${escapeHtml(referenceNo)}</p>
+                    <p class="date">${escapeHtml(today || '')}</p>
+
+                    <div class="address-block">
+                        <p><b>${escapeHtml(bankInfo.name || 'BANK NAME')}</b><br>
+                        ${bankAddressHtml}</p>
+                    </div>
+
+                    <u><p class="attn"><strong>Attn: Trade Service (Import)</strong></p></u>
+
+                    <u><b><p class="subject">
+                        Sub: ${escapeHtml(subjectLine)}
+                    </p></b></u>
+
+                    <p>Dear Sir,</p>
+
+                    <p style="text-align: justify;">
+                        We are enclosing L/C application form and other related papers duly filled in, stamped and
+                        signed by us for opening L/C worth <strong>${escapeHtml(currencySymbol)} ${toCurrency(grandTotal)}
+                        (${escapeHtml(totalInWords)})</strong>
+                        only favoring <strong>${escapeHtml(vendorName)}</strong>,
+                        <strong>${vendorAddressHtml}</strong>.
+                    </p>
+
+                    <p>
+                        Please register L/C & request to debit our current account no.
+                        <strong>${escapeHtml(accountNumber || 'ACCOUNT NUMBER NOT AVAILABLE')}</strong>
+                        maintained with you for your margin and charges.
+                    </p>
+
+                    <div class="closing">
+                        <p>Thanking You,</p>
+                        <p>Yours Faithfully,<br>
+                        For <strong>TRANSCOM FOODS LIMITED</strong></p>
+                    </div>
+
+                    <div class="sig-row" style="margin-top: 4em;">
+                        <div class="sig" style="text-align: left;">Authorized Signature</div>
+                        <div class="sig" style="text-align: right;">Authorized Signature</div>
+                    </div>
+
+                </main>
+                <footer class="page-footer"><img src="footer.jpg" alt="Footer"></footer>
+            </div>
         `;
     };
 
     const renderTocPreview = (proforma) => {
         const metrics = calculateProformaMetrics(proforma);
         const file = state.file || {};
-        let totalAssessment = 0;
 
-        const rows = metrics.lines.map((line, index) => {
-            const assessmentUnit = parseNumber(line.product.asses_unit_price);
-            const assessmentTotal = assessmentUnit * line.quantity;
-            totalAssessment += assessmentTotal;
+        const currencySymbol = 'US$';
+        const freightCost = metrics.totalFreight;
+        const grandTotal = metrics.totalCnf;
+        const piDate = formatDate(proforma.created_at, { day: '2-digit', month: 'short', year: 'numeric' }) || 'N/A';
 
-            return `
-                <tr>
-                    <td class="text-center">${index + 1}</td>
-                    <td>
-                        <div>${escapeHtml(line.product.product_name || '')}</div>
-                        <div class="muted">Brand: ${escapeHtml(line.product.brand || '')}</div>
-                    </td>
-                    <td>${escapeHtml(line.product.product_category || '')}</td>
-                    <td>${escapeHtml(line.product.hs_code || '')}</td>
-                    <td class="text-end">${formatQuantity(line.quantity)}</td>
-                    <td class="text-end">$${toCurrency(assessmentTotal)}</td>
-                </tr>
-            `;
-        }).join('') || `
-            <tr>
-                <td colspan="6" class="text-center muted">No products available for this proforma invoice.</td>
-            </tr>
-        `;
+        const hsCodes = new Set();
+        const productNames = new Set();
+
+        const productsOnInvoice = metrics.lines.map((line) => {
+            const unit = line.product.unit || '';
+            const description = line.product.product_name || '';
+            const hsCode = line.product.hs_code || '';
+
+            if (hsCode) {
+                hsCodes.add(hsCode);
+            }
+
+            if (description) {
+                productNames.add(description);
+            }
+
+            return {
+                description,
+                quantity: line.quantity,
+                unit,
+                unitPrice: line.cnfPerUnit || 0,
+            };
+        });
+
+        const productDescriptions = productsOnInvoice.length > 0
+            ? productsOnInvoice.map((product) => {
+                const quantityDisplay = formatQuantity(product.quantity);
+                const unitLower = (product.unit || '').toLowerCase();
+                const hasUnit = unitLower !== 'none' && unitLower !== '';
+                const description = escapeHtml(product.description || '');
+                const unitDisplay = escapeHtml(product.unit || '');
+                const amountDisplay = toCurrency(product.unitPrice);
+
+                if (hasUnit) {
+                    return `<strong>${escapeHtml(quantityDisplay)} ${unitDisplay} of ${description}</strong> at the rate of ${escapeHtml(currencySymbol)} ${amountDisplay}/${unitDisplay};`;
+                }
+
+                return `<strong>${description}</strong>;`;
+            }).join(' ')
+            : 'Description of goods to follow.';
+
+        const hsCodeString = Array.from(hsCodes).join(', ') || 'N/A';
+        const productNamesString = Array.from(productNames).join(', ') || 'products';
+
+        const advisingBankName = file.advising_bank_name || '';
+        const advisingSwift = file.advising_swift_code || '';
+        const advisingAccount = file.advising_bank_account || '';
+        const beneficiaryBank = file.beneficiary_bank_name || '';
+        const beneficiarySwift = file.beneficiary_swift || '';
+        const beneficiaryAccount = file.beneficiary_bank_account || '';
+
+        const lcToleranceEnabled = Boolean(state.lc && (state.lc.lc_tolerance_enabled || state.lc.lc_tolerance_percentage));
+        const lcTolerancePercentage = state.lc && state.lc.lc_tolerance_percentage
+            ? state.lc.lc_tolerance_percentage
+            : '10';
+
+        const lcLine = advisingBankName
+            ? `Please arrange to through L/C to <strong>${escapeHtml(advisingBankName)}, SWIFT CODE: ${escapeHtml(advisingSwift || 'N/A')}, A/C NO. ${escapeHtml(advisingAccount || 'N/A')}</strong>; For Payment to <strong>${escapeHtml(beneficiaryBank || 'Beneficiary Bank')}, SWIFT CODE: ${escapeHtml(beneficiarySwift || 'N/A')}, ${escapeHtml(file.vendor_name || 'VENDOR NAME')}, A/C NO. ${escapeHtml(beneficiaryAccount || 'N/A')}</strong>.`
+            : `Please open irrevocable L/C through <strong>${escapeHtml(beneficiaryBank || 'Beneficiary Bank')}, SWIFT Code: ${escapeHtml(beneficiarySwift || 'N/A')}.</strong>`;
 
         return `
-            ${renderPrintHeader('Table of Contents', proforma, file)}
-            <table>
-                <thead>
-                    <tr>
-                        <th class="text-center" style="width: 8%">Serial No</th>
-                        <th>Product Name</th>
-                        <th style="width: 14%">Category</th>
-                        <th style="width: 14%">HS Code</th>
-                        <th class="text-end" style="width: 12%">Quantity</th>
-                        <th class="text-end" style="width: 18%">Asses Value</th>
-                    </tr>
-                </thead>
-                <tbody>${rows}</tbody>
-                <tfoot>
-                    <tr>
-                        <td colspan="5" class="text-end">Total Assessment</td>
-                        <td class="text-end">$${toCurrency(totalAssessment)}</td>
-                    </tr>
-                </tfoot>
-            </table>
-            <div class="muted">Includes catalogue details for table of contents documentation.</div>
+            <div class="page page-break">
+                <header class="page-header"><img src="header.jpg" alt="Header"></header>
+                <main class="page-content" role="main">
+                    <div class="doc-title">Other Terms &amp; Conditions</div>
+                    <ol>
+                        <li>${lcLine}</li>
+                        <li>All Packets / Cartons must show <strong>Date of Manufacture &amp; Expiry</strong>.</li>
+                        <li>L/C number and date must appear in all shipping documents.</li>
+                        <li>L/C number and date, &amp; H.S. Code no. ${escapeHtml(hsCodeString)} must appear in the Invoice.</li>
+                        <li>
+                            Description of Goods: ${productDescriptions}
+                            Freight ${escapeHtml(currencySymbol)} ${toCurrency(freightCost)}; Total Amount ${escapeHtml(currencySymbol)} ${toCurrency(grandTotal)} as per Proforma Invoice No. ${escapeHtml(proforma.invoice_number || 'N/A')} Dated ${escapeHtml(piDate)}.
+                        </li>
+                        <li>Certificate of Origin issued by Chamber of Commerce.</li>
+                        <li>
+                            The acceptable highest level of radioactivity has been determined to
+                            <strong>50 BQ/KG/CS-137</strong> for imported
+                            <strong>${escapeHtml(productNamesString)}</strong>.
+                            The radioactivity testing report from the competent authority must be sent along with the shipping documents. The level of radioactivity in <strong>CS-137/KG</strong>
+                            should be mentioned quantitatively in the test report.
+                        </li>
+                        <li>
+                            The Certificates mentioning that the Goods Exported are <strong>“Fit for Human Consumption”</strong>, <strong>“Not Harmful to Human Health”</strong>, <strong>“Free From Harmful Substances”</strong> and <strong>“Free From All Harmful Germs”</strong> to be issued by the concerned authority of the Government of the Exporting Country should be sent separately with the shipping documents.
+                        </li>
+                        <li>Importer’s Name: Transcom Foods Limited, Address: SE (F) 5, Gulshan Avenue, Gulshan, Dhaka-1212, Bangladesh and E-TIN No. 892580838781, must be clearly mentioned / printed in the packets/cartons.</li>
+                        <li>E-TIN No. 892580838781, BIN No. 000002132-0101 must appear in the invoice and packing list.</li>
+                        <li>The beneficiary must send the shipment advice to Reliance Insurance Ltd. at their E-mail ID: <a href="mailto:info@reliance.com.bd">info@reliance.com.bd</a>.</li>
+                        ${lcToleranceEnabled ? `<li>L/C allows ${escapeHtml(`${lcTolerancePercentage}`)}% tolerance in amount &amp; qty.</li>` : ''}
+                    </ol><br><br>
+                    <div class="sig-row">
+                        <div class="sig">Authorized Signature</div>
+                        <div class="sig">Authorized Signature</div>
+                    </div>
+                </main>
+                <footer class="page-footer"><img src="footer.jpg" alt="Footer"></footer>
+            </div>
         `;
     };
 
@@ -1103,18 +1356,22 @@ document.addEventListener('DOMContentLoaded', () => {
                     let previewHtml = '';
                     let previewTitle = '';
 
+                    let previewOptions = {};
+
                     if (action === 'print-cnf') {
                         previewTitle = `C&F Calculation · ${proforma.invoice_number || ''}`;
                         previewHtml = renderCnfPreview(proforma);
                     } else if (action === 'print-bank-forwarding') {
                         previewTitle = `Bank Forwarding · ${proforma.invoice_number || ''}`;
                         previewHtml = renderBankForwardingPreview(proforma);
+                        previewOptions = { styles: buildLetterStyles() };
                     } else {
                         previewTitle = `Table of Contents · ${proforma.invoice_number || ''}`;
                         previewHtml = renderTocPreview(proforma);
+                        previewOptions = { styles: buildLetterStyles() };
                     }
 
-                    const opened = openPrintPreview(previewTitle, previewHtml);
+                    const opened = openPrintPreview(previewTitle, previewHtml, previewOptions);
 
                     if (!opened) {
                         showAlert(piAlert, 'Preview blocked. Please allow new tabs for this site to open the document.', 'warning');
