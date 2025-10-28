@@ -76,7 +76,7 @@
             $lines[$index]['cnf_total'] = $cnfTotal;
         }
         ?>
-        <div class="card shadow-sm border-0 mb-4" data-pi-card="<?php echo e($piToken); ?>">
+        <div class="card shadow-sm border-0 mb-4" data-pi-token="<?php echo e($piToken); ?>">
             <div class="card-body p-4">
                 <div class="d-flex flex-column flex-lg-row justify-content-between align-items-lg-start gap-3">
                     <div class="flex-grow-1">

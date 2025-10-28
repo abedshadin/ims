@@ -383,10 +383,16 @@ document.addEventListener('DOMContentLoaded', () => {
         const baseStyles = buildPrintStyles();
         const extraStyles = options.styles || '';
         const baseHref = document.baseURI || window.location.href;
-        const previewWindow = window.open('', '_blank', 'noopener');
+        const previewWindow = window.open('', '_blank');
 
         if (!previewWindow) {
             return false;
+        }
+
+        try {
+            previewWindow.opener = null;
+        } catch (error) {
+            // Ignore errors if the browser blocks modifying opener.
         }
 
         const html = `
@@ -495,11 +501,11 @@ document.addEventListener('DOMContentLoaded', () => {
         const today = formatDate(new Date(), { day: '2-digit', month: 'long', year: 'numeric' });
         const vendorName = file.vendor_name || 'VENDOR NAME';
         const vendorAddressHtml = formatMultiline(file.vendor_address || '') || 'VENDOR ADDRESS';
-        const subjectLine = `Opening L/C for Import of ${file.brand || 'Goods'}`;
-        const currencySymbol = 'US$';
+        const subjectLine = (state.lc && state.lc.subject_line) || 'Opening L/C for Import';
+        const currencySymbol = (state.file && state.file.default_currency) || 'US$';
         const grandTotal = metrics.totalCnf;
         const totalInWords = `${currencyToWords(grandTotal, 'US Dollars', 'Cents')} Only`;
-        const accountNumber = bankInfo.accountNumber || '';
+        const accountNumber = bankInfo.accountNumber || (state.file && (state.file.bank_account_number || state.file.beneficiary_bank_account)) || '';
 
         return `
             <div class="page">
@@ -531,7 +537,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
                     <p>
                         Please register L/C & request to debit our current account no.
-                        <strong>${escapeHtml(accountNumber || 'ACCOUNT NUMBER NOT AVAILABLE')}</strong>
+                        <strong>${escapeHtml(accountNumber || 'ACCOUNT_NUMBER_NOT_FOUND')}</strong>
                         maintained with you for your margin and charges.
                     </p>
 
@@ -556,7 +562,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const metrics = calculateProformaMetrics(proforma);
         const file = state.file || {};
 
-        const currencySymbol = 'US$';
+        const currencySymbol = (state.file && state.file.default_currency) || 'US$';
         const freightCost = metrics.totalFreight;
         const grandTotal = metrics.totalCnf;
         const piDate = formatDate(proforma.created_at, { day: '2-digit', month: 'short', year: 'numeric' }) || 'N/A';
@@ -1386,7 +1392,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
 
                 if (action === 'save-freight') {
-                    const card = actionButton.closest('[data-pi-token]');
+                    const card = actionButton.closest('.card[data-pi-token]');
                     const input = card ? card.querySelector('[data-freight-input]') : null;
 
                     if (!input) {
