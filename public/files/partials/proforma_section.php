@@ -86,13 +86,26 @@
                         </div>
                         <p class="text-muted small mb-0">Created <?php echo e($proforma['created_at_human'] ?? ''); ?></p>
                     </div>
-                    <div class="d-flex flex-wrap gap-2">
-                        <button class="btn btn-outline-secondary" type="button" data-action="edit-freight" data-pi-token="<?php echo e($piToken); ?>">
-                            Update Freight
-                        </button>
-                        <button class="btn btn-primary" type="button" data-action="add-product" data-pi-token="<?php echo e($piToken); ?>">
-                            Add Product
-                        </button>
+                    <div class="d-flex flex-column align-items-lg-end gap-2 w-100 w-lg-auto">
+                        <div class="d-flex flex-wrap justify-content-lg-end gap-2">
+                            <button class="btn btn-outline-primary" type="button" data-action="print-cnf" data-pi-token="<?php echo e($piToken); ?>">
+                                C&amp;F Calc Print &amp; Preview
+                            </button>
+                            <button class="btn btn-outline-primary" type="button" data-action="print-bank-forwarding" data-pi-token="<?php echo e($piToken); ?>">
+                                Bank Forwarding Print &amp; Preview
+                            </button>
+                            <button class="btn btn-outline-primary" type="button" data-action="print-toc" data-pi-token="<?php echo e($piToken); ?>">
+                                ToC Print &amp; Preview
+                            </button>
+                        </div>
+                        <div class="d-flex flex-wrap justify-content-lg-end gap-2">
+                            <button class="btn btn-outline-secondary" type="button" data-action="edit-freight" data-pi-token="<?php echo e($piToken); ?>">
+                                Update Freight
+                            </button>
+                            <button class="btn btn-primary" type="button" data-action="add-product" data-pi-token="<?php echo e($piToken); ?>">
+                                Add Product
+                            </button>
+                        </div>
                     </div>
                 </div>
                 <div class="table-responsive mt-4">

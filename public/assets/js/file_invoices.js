@@ -144,6 +144,262 @@ document.addEventListener('DOMContentLoaded', () => {
         return number.toFixed(3).replace(/\.0+$/, '').replace(/\.([0-9]*[1-9])0+$/, '.$1');
     };
 
+    const formatPercent = (value) => {
+        const number = typeof value === 'number' ? value : Number.parseFloat(`${value}`);
+
+        if (!Number.isFinite(number)) {
+            return '0.00%';
+        }
+
+        const sign = number > 0 ? '+' : '';
+        return `${sign}${number.toFixed(2)}%`;
+    };
+
+    const buildPrintStyles = () => {
+        return `
+            body { font-family: 'Segoe UI', Tahoma, sans-serif; color: #212529; background: #f8f9fa; margin: 0; padding: 2rem; }
+            h1 { margin-bottom: 0.25rem; }
+            h2 { margin-top: 0; font-size: 1.1rem; color: #6c757d; }
+            .print-header { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: flex-start; margin-bottom: 1.5rem; }
+            .print-header .meta { display: grid; gap: 0.35rem; font-size: 0.9rem; }
+            .print-header .meta span { font-weight: 600; color: #495057; }
+            .print-actions { display: flex; gap: 0.5rem; margin-bottom: 1.5rem; }
+            .print-actions button { padding: 0.4rem 0.9rem; border: 1px solid #0d6efd; background: #0d6efd; color: #fff; border-radius: 0.3rem; cursor: pointer; font-size: 0.9rem; }
+            .print-actions button.secondary { background: #6c757d; border-color: #6c757d; }
+            table { width: 100%; border-collapse: collapse; margin-bottom: 1.5rem; background: #fff; }
+            th, td { padding: 0.55rem 0.75rem; border: 1px solid #dee2e6; text-align: left; }
+            th { background: #e9ecef; font-size: 0.85rem; text-transform: uppercase; letter-spacing: 0.03em; }
+            tfoot td { font-weight: 600; background: #f1f3f5; }
+            .text-end { text-align: right; }
+            .text-center { text-align: center; }
+            .muted { color: #6c757d; font-size: 0.85rem; }
+            @media print {
+                body { background: #fff; padding: 0.5in; }
+                .print-actions { display: none; }
+            }
+        `;
+    };
+
+    const renderPrintHeader = (title, proforma, file) => {
+        const vendorName = (file && file.vendor_name) || '';
+        const fileName = (file && file.file_name) || '';
+        const bankName = (file && file.bank_name) || '';
+        const brand = (file && file.brand) || '';
+        const createdAt = proforma.created_at_human || '';
+
+        return `
+            <div class="print-header">
+                <div>
+                    <h1>${escapeHtml(title)}</h1>
+                    <h2>Proforma Invoice ${escapeHtml(proforma.invoice_number || '')}</h2>
+                    <div class="muted">Created ${escapeHtml(createdAt)}</div>
+                </div>
+                <div class="meta">
+                    <div><span>Vendor:</span> ${escapeHtml(vendorName)}</div>
+                    <div><span>File Ref:</span> ${escapeHtml(fileName)}</div>
+                    <div><span>Bank:</span> ${escapeHtml(bankName)}</div>
+                    <div><span>Brand:</span> ${escapeHtml(brand)}</div>
+                </div>
+            </div>
+        `;
+    };
+
+    const openPrintPreview = (title, content) => {
+        const printWindow = window.open('', '_blank', 'noopener,width=1000,height=720');
+
+        if (!printWindow) {
+            return false;
+        }
+
+        const styles = buildPrintStyles();
+
+        printWindow.document.write(`
+            <!DOCTYPE html>
+            <html lang="en">
+                <head>
+                    <meta charset="utf-8">
+                    <title>${title}</title>
+                    <style>${styles}</style>
+                </head>
+                <body>
+                    <div class="print-actions">
+                        <button type="button" onclick="window.print()">Print</button>
+                        <button type="button" class="secondary" onclick="window.close()">Close</button>
+                    </div>
+                    ${content}
+                </body>
+            </html>
+        `);
+
+        printWindow.document.close();
+        return true;
+    };
+
+    const renderCnfPreview = (proforma) => {
+        const metrics = calculateProformaMetrics(proforma);
+        const file = state.file || {};
+        let totalAssesValue = 0;
+        let totalCnf = 0;
+
+        const rows = metrics.lines.map((line, index) => {
+            const quantity = line.quantity;
+            const assesUnit = parseNumber(line.product.asses_unit_price);
+            const assesValue = assesUnit * quantity;
+            const cnfTotal = line.cnfTotal || 0;
+            const percentChange = assesValue > 0 ? ((cnfTotal - assesValue) / assesValue) * 100 : 0;
+
+            totalAssesValue += assesValue;
+            totalCnf += cnfTotal;
+
+            return `
+                <tr>
+                    <td class="text-center">${index + 1}</td>
+                    <td>${escapeHtml(line.product.product_name || '')}</td>
+                    <td class="text-end">$${toCurrency(assesValue)}</td>
+                    <td class="text-end">$${toCurrency(cnfTotal)}</td>
+                    <td class="text-end">${formatPercent(percentChange)}</td>
+                </tr>
+            `;
+        }).join('') || `
+            <tr>
+                <td colspan="5" class="text-center muted">No products available for this proforma invoice.</td>
+            </tr>
+        `;
+
+        const totalPercent = totalAssesValue > 0 ? ((totalCnf - totalAssesValue) / totalAssesValue) * 100 : 0;
+
+        return `
+            ${renderPrintHeader('C&amp;F Calculation Summary', proforma, file)}
+            <table>
+                <thead>
+                    <tr>
+                        <th class="text-center" style="width: 8%">Serial No</th>
+                        <th>Product Name</th>
+                        <th class="text-end" style="width: 18%">Asses Value</th>
+                        <th class="text-end" style="width: 18%">Calculated C&amp;F</th>
+                        <th class="text-end" style="width: 18%">% Change</th>
+                    </tr>
+                </thead>
+                <tbody>${rows}</tbody>
+                <tfoot>
+                    <tr>
+                        <td colspan="2" class="text-end">Totals</td>
+                        <td class="text-end">$${toCurrency(totalAssesValue)}</td>
+                        <td class="text-end">$${toCurrency(totalCnf)}</td>
+                        <td class="text-end">${formatPercent(totalPercent)}</td>
+                    </tr>
+                </tfoot>
+            </table>
+            <div class="muted">Percentage change compares calculated C&amp;F totals against assessed values.</div>
+        `;
+    };
+
+    const renderBankForwardingPreview = (proforma) => {
+        const metrics = calculateProformaMetrics(proforma);
+        const file = state.file || {};
+
+        let totalFreightShare = 0;
+        const rows = metrics.lines.map((line, index) => {
+            const freightShare = line.freightShare || 0;
+            totalFreightShare += freightShare;
+
+            return `
+                <tr>
+                    <td class="text-center">${index + 1}</td>
+                    <td>${escapeHtml(line.product.product_name || '')}</td>
+                    <td class="text-end">${formatQuantity(line.quantity)}</td>
+                    <td class="text-end">$${toCurrency(line.fobTotal)}</td>
+                    <td class="text-end">$${toCurrency(freightShare)}</td>
+                    <td class="text-end">$${toCurrency(line.cnfTotal || 0)}</td>
+                </tr>
+            `;
+        }).join('') || `
+            <tr>
+                <td colspan="6" class="text-center muted">No products available for this proforma invoice.</td>
+            </tr>
+        `;
+
+        return `
+            ${renderPrintHeader('Bank Forwarding Summary', proforma, file)}
+            <table>
+                <thead>
+                    <tr>
+                        <th class="text-center" style="width: 8%">Serial No</th>
+                        <th>Product Name</th>
+                        <th class="text-end" style="width: 12%">Quantity</th>
+                        <th class="text-end" style="width: 18%">FOB Total</th>
+                        <th class="text-end" style="width: 18%">Freight Share</th>
+                        <th class="text-end" style="width: 18%">Total C&amp;F</th>
+                    </tr>
+                </thead>
+                <tbody>${rows}</tbody>
+                <tfoot>
+                    <tr>
+                        <td colspan="3" class="text-end">Totals</td>
+                        <td class="text-end">$${toCurrency(metrics.totalFob)}</td>
+                        <td class="text-end">$${toCurrency(totalFreightShare)}</td>
+                        <td class="text-end">$${toCurrency(metrics.totalCnf)}</td>
+                    </tr>
+                </tfoot>
+            </table>
+            <div class="muted">Summary prepared for bank forwarding documentation.</div>
+        `;
+    };
+
+    const renderTocPreview = (proforma) => {
+        const metrics = calculateProformaMetrics(proforma);
+        const file = state.file || {};
+        let totalAssessment = 0;
+
+        const rows = metrics.lines.map((line, index) => {
+            const assessmentUnit = parseNumber(line.product.asses_unit_price);
+            const assessmentTotal = assessmentUnit * line.quantity;
+            totalAssessment += assessmentTotal;
+
+            return `
+                <tr>
+                    <td class="text-center">${index + 1}</td>
+                    <td>
+                        <div>${escapeHtml(line.product.product_name || '')}</div>
+                        <div class="muted">Brand: ${escapeHtml(line.product.brand || '')}</div>
+                    </td>
+                    <td>${escapeHtml(line.product.product_category || '')}</td>
+                    <td>${escapeHtml(line.product.hs_code || '')}</td>
+                    <td class="text-end">${formatQuantity(line.quantity)}</td>
+                    <td class="text-end">$${toCurrency(assessmentTotal)}</td>
+                </tr>
+            `;
+        }).join('') || `
+            <tr>
+                <td colspan="6" class="text-center muted">No products available for this proforma invoice.</td>
+            </tr>
+        `;
+
+        return `
+            ${renderPrintHeader('Table of Contents', proforma, file)}
+            <table>
+                <thead>
+                    <tr>
+                        <th class="text-center" style="width: 8%">Serial No</th>
+                        <th>Product Name</th>
+                        <th style="width: 14%">Category</th>
+                        <th style="width: 14%">HS Code</th>
+                        <th class="text-end" style="width: 12%">Quantity</th>
+                        <th class="text-end" style="width: 18%">Asses Value</th>
+                    </tr>
+                </thead>
+                <tbody>${rows}</tbody>
+                <tfoot>
+                    <tr>
+                        <td colspan="5" class="text-end">Total Assessment</td>
+                        <td class="text-end">$${toCurrency(totalAssessment)}</td>
+                    </tr>
+                </tfoot>
+            </table>
+            <div class="muted">Includes catalogue details for table of contents documentation.</div>
+        `;
+    };
+
     const updateFileMeta = (meta) => {
         if (!meta) {
             return;
@@ -472,10 +728,26 @@ document.addEventListener('DOMContentLoaded', () => {
                         </div>
                         <div class="text-muted small mt-1">Freight is distributed by total weight for C&amp;F.</div>
                     </div>
-                    <div class="d-flex gap-2 align-items-start">
-                        <button class="btn btn-primary" type="button" data-action="add-product" data-pi-token="${escapeHtml(proforma.token || '')}">
-                            Add Product
-                        </button>
+                    <div class="d-flex flex-column align-items-md-end gap-2 w-100 w-md-auto">
+                        <div class="d-flex flex-wrap justify-content-md-end gap-2">
+                            <button class="btn btn-outline-primary" type="button" data-action="print-cnf" data-pi-token="${escapeHtml(proforma.token || '')}">
+                                C&amp;F Calc Print &amp; Preview
+                            </button>
+                            <button class="btn btn-outline-primary" type="button" data-action="print-bank-forwarding" data-pi-token="${escapeHtml(proforma.token || '')}">
+                                Bank Forwarding Print &amp; Preview
+                            </button>
+                            <button class="btn btn-outline-primary" type="button" data-action="print-toc" data-pi-token="${escapeHtml(proforma.token || '')}">
+                                ToC Print &amp; Preview
+                            </button>
+                        </div>
+                        <div class="d-flex flex-wrap justify-content-md-end gap-2">
+                            <button class="btn btn-outline-secondary" type="button" data-action="edit-freight" data-pi-token="${escapeHtml(proforma.token || '')}">
+                                Update Freight
+                            </button>
+                            <button class="btn btn-primary" type="button" data-action="add-product" data-pi-token="${escapeHtml(proforma.token || '')}">
+                                Add Product
+                            </button>
+                        </div>
                     </div>
                 </div>
                 <div class="table-responsive mt-4">
@@ -812,6 +1084,37 @@ document.addEventListener('DOMContentLoaded', () => {
                 const piToken = actionButton.getAttribute('data-pi-token') || '';
 
                 if (!piToken) {
+                    return;
+                }
+
+                if (action === 'print-cnf' || action === 'print-bank-forwarding' || action === 'print-toc') {
+                    const proforma = state.proformas.find((item) => item.token === piToken);
+
+                    if (!proforma) {
+                        showAlert(piAlert, 'Unable to locate the selected proforma invoice.', 'danger');
+                        return;
+                    }
+
+                    let previewHtml = '';
+                    let previewTitle = '';
+
+                    if (action === 'print-cnf') {
+                        previewTitle = `C&F Calculation · ${proforma.invoice_number || ''}`;
+                        previewHtml = renderCnfPreview(proforma);
+                    } else if (action === 'print-bank-forwarding') {
+                        previewTitle = `Bank Forwarding · ${proforma.invoice_number || ''}`;
+                        previewHtml = renderBankForwardingPreview(proforma);
+                    } else {
+                        previewTitle = `Table of Contents · ${proforma.invoice_number || ''}`;
+                        previewHtml = renderTocPreview(proforma);
+                    }
+
+                    const opened = openPrintPreview(previewTitle, previewHtml);
+
+                    if (!opened) {
+                        showAlert(piAlert, 'Pop-up blocked. Please enable pop-ups to preview prints.', 'warning');
+                    }
+
                     return;
                 }
 
