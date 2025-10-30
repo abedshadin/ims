@@ -35,10 +35,10 @@
                 </div>
                 <p class="text-muted small mb-0">When enabled, the percentage will appear on generated ToC letters.</p>
             </div>
-            <div class="col-lg-2 d-none" data-create-lc-tolerance-wrapper>
+            <div class="col-lg-2 d-none" data-create-lc-tolerance-wrapper hidden>
                 <label class="form-label text-uppercase small fw-semibold" for="lc_tolerance_percentage">Tolerance %</label>
                 <div class="input-group">
-                    <input class="form-control" type="number" step="0.01" min="0" id="lc_tolerance_percentage" name="lc_tolerance_percentage" value="10" disabled>
+                    <input class="form-control" type="number" step="0.01" min="0" id="lc_tolerance_percentage" name="lc_tolerance_percentage" value="10" disabled data-create-lc-tolerance-input>
                     <span class="input-group-text">%</span>
                 </div>
             </div>
@@ -171,7 +171,7 @@
                                         <label class="form-check-label text-uppercase small fw-semibold" for="lc_tolerance_toggle_<?php echo e($piToken); ?>">Enable L/C Tolerance</label>
                                     </div>
                                 </div>
-                                <div class="col-lg-3 <?php echo $lcToleranceEnabled ? '' : 'd-none'; ?>" data-lc-tolerance-wrapper>
+                                <div class="col-lg-3 <?php echo $lcToleranceEnabled ? '' : 'd-none'; ?>" data-lc-tolerance-wrapper<?php echo $lcToleranceEnabled ? '' : ' hidden'; ?>>
                                     <label class="form-label text-uppercase small fw-semibold" for="lc_tolerance_value_<?php echo e($piToken); ?>">Tolerance %</label>
                                     <div class="input-group input-group-sm">
                                         <input class="form-control" type="number" step="0.01" min="0" id="lc_tolerance_value_<?php echo e($piToken); ?>" value="<?php echo e($lcTolerancePercentage); ?>" data-lc-tolerance-input <?php echo $lcToleranceEnabled ? '' : 'disabled'; ?>>

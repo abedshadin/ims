@@ -87,7 +87,9 @@ document.addEventListener('DOMContentLoaded', () => {
     const createPiForm = document.getElementById('createPiForm');
     const createToleranceToggle = document.querySelector('[data-create-lc-tolerance-toggle]');
     const createToleranceWrapper = document.querySelector('[data-create-lc-tolerance-wrapper]');
-    const createToleranceInput = createToleranceWrapper ? createToleranceWrapper.querySelector('input') : null;
+    const createToleranceInput = createToleranceWrapper
+        ? createToleranceWrapper.querySelector('[data-create-lc-tolerance-input]') || createToleranceWrapper.querySelector('input')
+        : null;
     const piAlert = document.getElementById('piAlert');
     const productModalElement = document.getElementById('productModal');
     const productForm = document.getElementById('productForm');
@@ -133,10 +135,14 @@ document.addEventListener('DOMContentLoaded', () => {
 
         if (enabled) {
             wrapper.classList.remove('d-none');
-            wrapper.style.display = '';
+            wrapper.removeAttribute('hidden');
+            wrapper.style.removeProperty('display');
         } else {
-            wrapper.classList.add('d-none');
-            wrapper.style.display = 'none';
+            if (!wrapper.classList.contains('d-none')) {
+                wrapper.classList.add('d-none');
+            }
+            wrapper.setAttribute('hidden', 'hidden');
+            wrapper.style.removeProperty('display');
         }
 
         if (!input) {
