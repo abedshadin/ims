@@ -29,20 +29,17 @@
                 <button class="btn btn-primary w-100" type="submit">Add Proforma Invoice</button>
             </div>
             <div class="col-lg-4">
-                <div class="border rounded-3 p-3 h-100">
-                    <p class="text-uppercase small fw-semibold mb-2">Checklist</p>
-                    <div class="form-check">
-                        <input class="form-check-input" type="checkbox" id="lc_tolerance_enabled" name="lc_tolerance_enabled" value="1" data-create-lc-tolerance-check>
-                        <label class="form-check-label fw-semibold" for="lc_tolerance_enabled">Include L/C Tolerance</label>
-                    </div>
-                    <p class="text-muted small mb-0">Tick to display the tolerance percentage on generated ToC letters.</p>
-                    <div class="mt-3 d-none" data-create-lc-tolerance-wrapper hidden>
-                        <label class="form-label text-uppercase small fw-semibold" for="lc_tolerance_percentage">Tolerance %</label>
-                        <div class="input-group">
-                            <input class="form-control" type="number" step="0.01" min="0" id="lc_tolerance_percentage" name="lc_tolerance_percentage" value="10" disabled data-create-lc-tolerance-input>
-                            <span class="input-group-text">%</span>
-                        </div>
-                    </div>
+                <div class="form-check">
+                    <input class="form-check-input" type="checkbox" id="lc_tolerance_enabled" name="lc_tolerance_enabled" value="1" data-create-lc-tolerance-check>
+                    <label class="form-check-label text-uppercase small fw-semibold" for="lc_tolerance_enabled">Enable L/C Tolerance</label>
+                </div>
+                <p class="text-muted small mb-0">When enabled, the percentage will appear on generated ToC letters.</p>
+            </div>
+            <div class="col-lg-2 d-none" data-create-lc-tolerance-wrapper hidden>
+                <label class="form-label text-uppercase small fw-semibold" for="lc_tolerance_percentage">Tolerance %</label>
+                <div class="input-group">
+                    <input class="form-control" type="number" step="0.01" min="0" id="lc_tolerance_percentage" name="lc_tolerance_percentage" value="10" disabled data-create-lc-tolerance-input>
+                    <span class="input-group-text">%</span>
                 </div>
             </div>
         </form>
@@ -171,9 +168,9 @@
                                 <div class="col-lg-4">
                                     <div class="form-check">
                                         <input class="form-check-input" type="checkbox" id="lc_tolerance_check_<?php echo e($piToken); ?>" data-lc-tolerance-check <?php echo $lcToleranceEnabled ? 'checked' : ''; ?>>
-                                        <label class="form-check-label text-uppercase small fw-semibold" for="lc_tolerance_check_<?php echo e($piToken); ?>">Include L/C Tolerance</label>
+                                        <label class="form-check-label text-uppercase small fw-semibold" for="lc_tolerance_check_<?php echo e($piToken); ?>">Enable L/C Tolerance</label>
                                     </div>
-                                    <p class="text-muted small mb-0">Tick to show the tolerance percentage on generated ToC letters.</p>
+                                    <p class="text-muted small mb-0">When enabled, the percentage will appear on generated ToC letters.</p>
                                 </div>
                                 <div class="col-lg-3 <?php echo $lcToleranceEnabled ? '' : 'd-none'; ?>" data-lc-tolerance-wrapper<?php echo $lcToleranceEnabled ? '' : ' hidden'; ?>>
                                     <label class="form-label text-uppercase small fw-semibold" for="lc_tolerance_value_<?php echo e($piToken); ?>">Tolerance %</label>
