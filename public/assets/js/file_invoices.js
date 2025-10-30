@@ -56,11 +56,12 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         const toleranceString = toleranceNumber.toFixed(2);
+        const toleranceEnabled = Boolean(proforma.lc_tolerance_enabled) || toleranceNumber > 0;
 
         return {
             ...proforma,
             pi_header: proforma.pi_header || '',
-            lc_tolerance_enabled: Boolean(proforma.lc_tolerance_enabled),
+            lc_tolerance_enabled: toleranceEnabled,
             lc_tolerance_percentage: toleranceString,
             lc_tolerance_percentage_formatted: toleranceString,
             freight_amount: proforma.freight_amount || proforma.freight_amount_formatted || '0.00',
@@ -130,15 +131,12 @@ document.addEventListener('DOMContentLoaded', () => {
             return;
         }
 
-        if (createToleranceToggle.checked) {
-            createToleranceWrapper.classList.remove('d-none');
-            createToleranceInput.disabled = false;
-            if (!createToleranceInput.value) {
-                createToleranceInput.value = '10';
-            }
-        } else {
-            createToleranceWrapper.classList.add('d-none');
-            createToleranceInput.disabled = true;
+        const enabled = createToleranceToggle.checked;
+        createToleranceWrapper.classList.toggle('d-none', !enabled);
+        createToleranceInput.disabled = !enabled;
+
+        if (enabled && !createToleranceInput.value.trim()) {
+            createToleranceInput.value = '10.00';
         }
     };
 
@@ -722,8 +720,8 @@ document.addEventListener('DOMContentLoaded', () => {
         const beneficiarySwift = file.beneficiary_swift || '';
         const beneficiaryAccount = file.beneficiary_bank_account || '';
 
-        const lcToleranceEnabled = Boolean(proforma.lc_tolerance_enabled);
         const lcTolerancePercentageNumber = parseNumber(proforma.lc_tolerance_percentage);
+        const lcToleranceEnabled = Boolean(proforma.lc_tolerance_enabled) || lcTolerancePercentageNumber > 0;
         const lcTolerancePercentage = lcTolerancePercentageNumber.toFixed(2);
 
         const lcLine = advisingBankName
@@ -1103,9 +1101,11 @@ document.addEventListener('DOMContentLoaded', () => {
         const referenceDateFormatted = reference.date_formatted
             || (reference.date ? formatDate(reference.date, { day: '2-digit', month: 'short', year: 'numeric' }) : '');
         const freightValue = toCurrency(proforma.freight_amount || metrics.totalFreight || 0);
-        const toleranceEnabled = Boolean(proforma.lc_tolerance_enabled);
-        const toleranceValue = toCurrency(toleranceEnabled ? proforma.lc_tolerance_percentage || '0' : proforma.lc_tolerance_percentage || '0');
+        const toleranceValueRaw = proforma.lc_tolerance_percentage || '0';
+        const toleranceEnabled = Boolean(proforma.lc_tolerance_enabled) || parseNumber(toleranceValueRaw) > 0;
+        const toleranceValue = toCurrency(toleranceValueRaw);
         const toleranceWrapperClass = toleranceEnabled ? '' : 'd-none';
+        const toleranceDisabledAttr = toleranceEnabled ? '' : ' disabled';
         const totalWeightDisplay = formatWeight(metrics.totalWeight);
         const freightPerWeightDisplay = parseNumber(metrics.freightPerWeight).toFixed(4);
         const totalFobDisplay = toCurrency(metrics.totalFob);
@@ -1171,7 +1171,7 @@ document.addEventListener('DOMContentLoaded', () => {
                             <div class="col-lg-3 ${toleranceWrapperClass}" data-lc-tolerance-wrapper>
                                 <label class="form-label text-uppercase small fw-semibold">Tolerance %</label>
                                 <div class="input-group input-group-sm">
-                                    <input class="form-control" type="number" step="0.01" min="0" value="${escapeHtml(toleranceValue)}" data-lc-tolerance-input>
+                                    <input class="form-control" type="number" step="0.01" min="0" value="${escapeHtml(toleranceValue)}" data-lc-tolerance-input${toleranceDisabledAttr}>
                                     <span class="input-group-text">%</span>
                                 </div>
                             </div>
@@ -1757,47 +1757,66 @@ document.addEventListener('DOMContentLoaded', () => {
             });
 
             piList.addEventListener('change', (event) => {
-                if (event.target.matches('[data-lc-tolerance-toggle]')) {
-                    const toggle = event.target;
-                    const card = toggle.closest('.card[data-pi-token]');
-                    const wrapper = card ? card.querySelector('[data-lc-tolerance-wrapper]') : null;
-                    const input = wrapper ? wrapper.querySelector('[data-lc-tolerance-input]') : null;
-                    const piTokenValue = card ? card.getAttribute('data-pi-token') : '';
-                    const stateProforma = piTokenValue
-                        ? state.proformas.find((item) => item.token === piTokenValue)
-                        : null;
+                if (!event.target.matches('[data-lc-tolerance-toggle]')) {
+                    return;
+                }
 
-                    if (!wrapper) {
-                        return;
-                    }
+                const toggle = event.target;
+                const card = toggle.closest('.card[data-pi-token]');
+                const wrapper = card ? card.querySelector('[data-lc-tolerance-wrapper]') : null;
+                const input = wrapper ? wrapper.querySelector('[data-lc-tolerance-input]') : null;
+                const piTokenValue = card ? card.getAttribute('data-pi-token') : '';
+                const stateProforma = piTokenValue
+                    ? state.proformas.find((item) => item.token === piTokenValue)
+                    : null;
 
-                    if (toggle.checked) {
-                        wrapper.classList.remove('d-none');
-                        if (input) {
-                            input.disabled = false;
-                            if (!input.value) {
-                                input.value = '10.00';
-                            }
-                        }
-                        if (stateProforma) {
-                            const value = input ? input.value || '10.00' : '10.00';
-                            stateProforma.lc_tolerance_enabled = true;
-                            stateProforma.lc_tolerance_percentage = value;
-                            stateProforma.lc_tolerance_percentage_formatted = toCurrency(value);
+                if (!wrapper) {
+                    return;
+                }
+
+                const enabled = toggle.checked;
+                wrapper.classList.toggle('d-none', !enabled);
+
+                if (input) {
+                    input.disabled = !enabled;
+
+                    if (enabled) {
+                        if (!input.value || parseNumber(input.value) === 0) {
+                            input.value = '10.00';
                         }
                     } else {
-                        wrapper.classList.add('d-none');
-                        if (input) {
-                            input.disabled = true;
-                            input.value = input.value || '0.00';
-                        }
-                        if (stateProforma) {
-                            stateProforma.lc_tolerance_enabled = false;
-                            stateProforma.lc_tolerance_percentage = '0.00';
-                            stateProforma.lc_tolerance_percentage_formatted = '0.00';
-                        }
+                        input.value = '0.00';
                     }
                 }
+
+                if (stateProforma) {
+                    const currentValue = input ? input.value || '0.00' : '0.00';
+                    const normalisedValue = enabled ? toCurrency(currentValue) : '0.00';
+                    stateProforma.lc_tolerance_enabled = enabled;
+                    stateProforma.lc_tolerance_percentage = normalisedValue;
+                    stateProforma.lc_tolerance_percentage_formatted = normalisedValue;
+                }
+            });
+
+            piList.addEventListener('input', (event) => {
+                if (!event.target.matches('[data-lc-tolerance-input]')) {
+                    return;
+                }
+
+                const input = event.target;
+                const card = input.closest('.card[data-pi-token]');
+                const piTokenValue = card ? card.getAttribute('data-pi-token') : '';
+                const stateProforma = piTokenValue
+                    ? state.proformas.find((item) => item.token === piTokenValue)
+                    : null;
+
+                if (!stateProforma) {
+                    return;
+                }
+
+                const normalised = toCurrency(input.value || '0');
+                stateProforma.lc_tolerance_percentage = normalised;
+                stateProforma.lc_tolerance_percentage_formatted = normalised;
             });
         }
 

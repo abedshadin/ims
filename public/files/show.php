@@ -146,12 +146,13 @@ if ($fileId === null) {
                 $referenceDate = $reference['date'] ?? null;
 
                 $tolerancePercentage = (float) ($row['lc_tolerance_percentage'] ?? 0);
+                $toleranceEnabled = ((int) ($row['lc_tolerance_enabled'] ?? 0) === 1) || $tolerancePercentage > 0;
 
                 $proformas[] = [
                     'token' => $encodedId,
                     'invoice_number' => (string) $row['invoice_number'],
                     'pi_header' => (string) $row['pi_header'],
-                    'lc_tolerance_enabled' => ((int) ($row['lc_tolerance_enabled'] ?? 0)) === 1,
+                    'lc_tolerance_enabled' => $toleranceEnabled,
                     'lc_tolerance_percentage' => number_format($tolerancePercentage, 2, '.', ''),
                     'lc_tolerance_percentage_formatted' => number_format($tolerancePercentage, 2),
                     'freight_amount' => number_format((float) $row['freight_amount'], 2, '.', ''),

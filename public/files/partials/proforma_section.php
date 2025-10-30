@@ -106,7 +106,7 @@
         $referenceCode = (string) ($reference['code'] ?? '');
         $referenceDate = (string) ($reference['date'] ?? '');
         $referenceDateFormatted = $referenceDate !== '' ? date('j M Y', strtotime($referenceDate)) : null;
-        $lcToleranceEnabled = !empty($proforma['lc_tolerance_enabled']);
+        $lcToleranceEnabled = !empty($proforma['lc_tolerance_enabled']) || ((float) ($proforma['lc_tolerance_percentage'] ?? 0)) > 0;
         $lcTolerancePercentage = isset($proforma['lc_tolerance_percentage']) ? (string) $proforma['lc_tolerance_percentage'] : '0.00';
         ?>
         <div class="col-12">
