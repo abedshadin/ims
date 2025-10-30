@@ -136,13 +136,13 @@ document.addEventListener('DOMContentLoaded', () => {
         if (enabled) {
             wrapper.classList.remove('d-none');
             wrapper.removeAttribute('hidden');
-            wrapper.style.removeProperty('display');
+            wrapper.style.display = 'block';
         } else {
             if (!wrapper.classList.contains('d-none')) {
                 wrapper.classList.add('d-none');
             }
             wrapper.setAttribute('hidden', 'hidden');
-            wrapper.style.removeProperty('display');
+            wrapper.style.display = 'none';
         }
 
         if (!input) {
@@ -795,7 +795,8 @@ document.addEventListener('DOMContentLoaded', () => {
         const beneficiarySwift = file.beneficiary_swift || '';
         const beneficiaryAccount = file.beneficiary_bank_account || '';
 
-        const lcTolerancePercentageNumber = parseNumber(proforma.lc_tolerance_percentage);
+        const lcToleranceRaw = proforma.lc_tolerance_percentage ?? proforma.lc_tolerance_percentage_formatted ?? '0';
+        const lcTolerancePercentageNumber = parseNumber(lcToleranceRaw);
         const lcToleranceEnabled = Boolean(proforma.lc_tolerance_enabled) || lcTolerancePercentageNumber > 0;
         const lcTolerancePercentage = lcTolerancePercentageNumber.toFixed(2);
 
