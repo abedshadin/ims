@@ -32,8 +32,7 @@ $fileToken = trim($_POST['file_token'] ?? '');
 $invoiceNumber = trim($_POST['invoice_number'] ?? '');
 $piHeader = trim($_POST['pi_header'] ?? '');
 $freightAmountRaw = trim($_POST['freight_amount'] ?? '');
-$lcToleranceEnabledRaw = $_POST['lc_tolerance_enabled'] ?? '';
-$lcTolerancePercentageRaw = trim($_POST['lc_tolerance_percentage'] ?? '');
+$telerangePercentageRaw = trim($_POST['telerange_percentage'] ?? '');
 
 if ($fileToken === '' || ($fileId = IdCipher::decode($fileToken)) === null) {
     http_response_code(422);
@@ -56,8 +55,7 @@ if ($invoiceNumber === '') {
 $piHeader = mb_substr($piHeader, 0, 255);
 
 $freightAmount = 0.0;
-$lcToleranceEnabled = false;
-$lcTolerancePercentage = 10.0;
+$telerangePercentage = 0.0;
 
 if ($freightAmountRaw !== '') {
     if (!is_numeric($freightAmountRaw)) {
@@ -81,35 +79,26 @@ if ($freightAmountRaw !== '') {
     }
 }
 
-if ($lcToleranceEnabledRaw !== '') {
-    $lcToleranceEnabled = filter_var($lcToleranceEnabledRaw, FILTER_VALIDATE_BOOL, FILTER_NULL_ON_FAILURE);
-    $lcToleranceEnabled = $lcToleranceEnabled === null ? false : $lcToleranceEnabled;
-}
-
-if ($lcToleranceEnabled) {
-    if ($lcTolerancePercentageRaw === '') {
-        $lcTolerancePercentage = 10.0;
-    } elseif (!is_numeric($lcTolerancePercentageRaw)) {
+if ($telerangePercentageRaw !== '') {
+    if (!is_numeric($telerangePercentageRaw)) {
         http_response_code(422);
         echo json_encode([
             'status' => 'error',
-            'message' => 'Provide a numeric L/C tolerance percentage when enabled.',
+            'message' => 'Provide the telerange percentage as a numeric value.',
         ]);
         exit;
-    } else {
-        $lcTolerancePercentage = (float) $lcTolerancePercentageRaw;
-
-        if ($lcTolerancePercentage < 0 || $lcTolerancePercentage > 1000) {
-            http_response_code(422);
-            echo json_encode([
-                'status' => 'error',
-                'message' => 'The L/C tolerance percentage must be between 0 and 1000.',
-            ]);
-            exit;
-        }
     }
-} else {
-    $lcTolerancePercentage = 0.0;
+
+    $telerangePercentage = (float) $telerangePercentageRaw;
+
+    if ($telerangePercentage < 0 || $telerangePercentage > 1000) {
+        http_response_code(422);
+        echo json_encode([
+            'status' => 'error',
+            'message' => 'The telerange percentage must be between 0 and 1000.',
+        ]);
+        exit;
+    }
 }
 
 try {
@@ -143,8 +132,8 @@ try {
         ':vendor_file_id' => $fileId,
         ':invoice_number' => $invoiceNumber,
         ':pi_header' => $piHeader,
-        ':lc_tolerance_enabled' => $lcToleranceEnabled ? 1 : 0,
-        ':lc_tolerance_percentage' => $lcToleranceEnabled ? $lcTolerancePercentage : 0,
+        ':lc_tolerance_enabled' => 0,
+        ':lc_tolerance_percentage' => $telerangePercentage,
         ':freight_amount' => $freightAmount,
         ':created_by' => Auth::userId(),
     ]);
@@ -185,9 +174,8 @@ try {
             'token' => $piToken,
             'invoice_number' => $invoiceNumber,
             'pi_header' => $piHeader,
-            'lc_tolerance_enabled' => $lcToleranceEnabled,
-            'lc_tolerance_percentage' => $lcToleranceEnabled ? number_format($lcTolerancePercentage, 2, '.', '') : '0.00',
-            'lc_tolerance_percentage_formatted' => $lcToleranceEnabled ? number_format($lcTolerancePercentage, 2) : '0.00',
+            'telerange_percentage' => number_format($telerangePercentage, 2, '.', ''),
+            'telerange_percentage_formatted' => number_format($telerangePercentage, 2),
             'freight_amount' => number_format($freightAmount, 2, '.', ''),
             'created_at' => $createdAt,
             'created_at_human' => date('j M Y, g:i A', strtotime($createdAt)),
