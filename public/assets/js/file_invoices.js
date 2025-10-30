@@ -1762,6 +1762,10 @@ document.addEventListener('DOMContentLoaded', () => {
                     const card = toggle.closest('.card[data-pi-token]');
                     const wrapper = card ? card.querySelector('[data-lc-tolerance-wrapper]') : null;
                     const input = wrapper ? wrapper.querySelector('[data-lc-tolerance-input]') : null;
+                    const piTokenValue = card ? card.getAttribute('data-pi-token') : '';
+                    const stateProforma = piTokenValue
+                        ? state.proformas.find((item) => item.token === piTokenValue)
+                        : null;
 
                     if (!wrapper) {
                         return;
@@ -1775,10 +1779,22 @@ document.addEventListener('DOMContentLoaded', () => {
                                 input.value = '10.00';
                             }
                         }
+                        if (stateProforma) {
+                            const value = input ? input.value || '10.00' : '10.00';
+                            stateProforma.lc_tolerance_enabled = true;
+                            stateProforma.lc_tolerance_percentage = value;
+                            stateProforma.lc_tolerance_percentage_formatted = toCurrency(value);
+                        }
                     } else {
                         wrapper.classList.add('d-none');
                         if (input) {
                             input.disabled = true;
+                            input.value = input.value || '0.00';
+                        }
+                        if (stateProforma) {
+                            stateProforma.lc_tolerance_enabled = false;
+                            stateProforma.lc_tolerance_percentage = '0.00';
+                            stateProforma.lc_tolerance_percentage_formatted = '0.00';
                         }
                     }
                 }
