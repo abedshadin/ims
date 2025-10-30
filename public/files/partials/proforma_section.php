@@ -10,11 +10,11 @@
     <div class="card-body pt-3">
         <form id="createPiForm" class="row gy-3" method="post" novalidate>
             <input type="hidden" name="file_token" value="<?php echo e($fileToken); ?>">
-            <div class="col-lg-4">
+            <div class="col-lg-3">
                 <label class="form-label text-uppercase small fw-semibold" for="invoice_number">Proforma Invoice Number</label>
                 <input class="form-control" type="text" id="invoice_number" name="invoice_number" placeholder="e.g. PI-2025-001" required>
             </div>
-            <div class="col-lg-4">
+            <div class="col-lg-3">
                 <label class="form-label text-uppercase small fw-semibold" for="pi_header">PI Header</label>
                 <input class="form-control" type="text" id="pi_header" name="pi_header" placeholder="e.g. Frozen Fries">
             </div>
@@ -25,22 +25,15 @@
                     <input class="form-control" type="number" step="0.01" id="freight_amount" name="freight_amount" placeholder="0.00">
                 </div>
             </div>
-            <div class="col-lg-2 d-flex align-items-end">
-                <button class="btn btn-primary w-100" type="submit">Add Proforma Invoice</button>
-            </div>
-            <div class="col-lg-4">
-                <div class="form-check">
-                    <input class="form-check-input" type="checkbox" id="lc_tolerance_enabled" name="lc_tolerance_enabled" value="1" data-create-lc-tolerance-check>
-                    <label class="form-check-label text-uppercase small fw-semibold" for="lc_tolerance_enabled">Enable L/C Tolerance</label>
-                </div>
-                <p class="text-muted small mb-0">When enabled, the percentage will appear on generated ToC letters.</p>
-            </div>
-            <div class="col-lg-2 d-none" data-create-lc-tolerance-wrapper hidden>
-                <label class="form-label text-uppercase small fw-semibold" for="lc_tolerance_percentage">Tolerance %</label>
+            <div class="col-lg-2">
+                <label class="form-label text-uppercase small fw-semibold" for="telerange_percentage">Telerange %</label>
                 <div class="input-group">
-                    <input class="form-control" type="number" step="0.01" min="0" id="lc_tolerance_percentage" name="lc_tolerance_percentage" value="10" disabled data-create-lc-tolerance-input>
+                    <input class="form-control" type="number" step="0.01" min="0" id="telerange_percentage" name="telerange_percentage" placeholder="0.00">
                     <span class="input-group-text">%</span>
                 </div>
+            </div>
+            <div class="col-lg-2 d-flex align-items-end">
+                <button class="btn btn-primary w-100" type="submit">Add Proforma Invoice</button>
             </div>
         </form>
         <div id="piAlert" class="alert d-none mt-3" role="alert"></div>
@@ -106,8 +99,7 @@
         $referenceCode = (string) ($reference['code'] ?? '');
         $referenceDate = (string) ($reference['date'] ?? '');
         $referenceDateFormatted = $referenceDate !== '' ? date('j M Y', strtotime($referenceDate)) : null;
-        $lcToleranceEnabled = !empty($proforma['lc_tolerance_enabled']) || ((float) ($proforma['lc_tolerance_percentage'] ?? 0)) > 0;
-        $lcTolerancePercentage = isset($proforma['lc_tolerance_percentage']) ? (string) $proforma['lc_tolerance_percentage'] : '0.00';
+        $telerangePercentage = isset($proforma['telerange_percentage']) ? (string) $proforma['telerange_percentage'] : '0.00';
         ?>
         <div class="col-12">
             <div class="workspace-section-card card shadow-sm border-0" data-pi-token="<?php echo e($piToken); ?>">
@@ -147,11 +139,11 @@
                     <div class="card bg-light border-0 mt-3">
                         <div class="card-body py-3">
                             <div class="row g-3 align-items-end">
-                                <div class="col-lg-4">
+                                <div class="col-lg-3">
                                     <label class="form-label text-uppercase small fw-semibold" for="pi_header_<?php echo e($piToken); ?>">PI Header</label>
                                     <input class="form-control form-control-sm" type="text" id="pi_header_<?php echo e($piToken); ?>" value="<?php echo e($piHeaderValue); ?>" data-pi-header-input>
                                 </div>
-                                <div class="col-lg-4">
+                                <div class="col-lg-3">
                                     <label class="form-label text-uppercase small fw-semibold">Bank Reference</label>
                                     <input class="form-control form-control-sm" type="text" value="<?php echo e($referenceCode); ?>" data-bank-reference readonly>
                                 </div>
@@ -162,22 +154,15 @@
                                         <div class="text-muted small mt-1">Saved as <?php echo e($referenceDateFormatted); ?></div>
                                     <?php endif; ?>
                                 </div>
-                                <div class="col-lg-1 d-flex align-items-end">
-                                    <button class="btn btn-outline-secondary w-100" type="button" data-action="save-pi-details" data-pi-token="<?php echo e($piToken); ?>">Save</button>
-                                </div>
-                                <div class="col-lg-4">
-                                    <div class="form-check">
-                                        <input class="form-check-input" type="checkbox" id="lc_tolerance_check_<?php echo e($piToken); ?>" data-lc-tolerance-check <?php echo $lcToleranceEnabled ? 'checked' : ''; ?>>
-                                        <label class="form-check-label text-uppercase small fw-semibold" for="lc_tolerance_check_<?php echo e($piToken); ?>">Enable L/C Tolerance</label>
-                                    </div>
-                                    <p class="text-muted small mb-0">When enabled, the percentage will appear on generated ToC letters.</p>
-                                </div>
-                                <div class="col-lg-3 <?php echo $lcToleranceEnabled ? '' : 'd-none'; ?>" data-lc-tolerance-wrapper<?php echo $lcToleranceEnabled ? '' : ' hidden'; ?>>
-                                    <label class="form-label text-uppercase small fw-semibold" for="lc_tolerance_value_<?php echo e($piToken); ?>">Tolerance %</label>
+                                <div class="col-lg-2">
+                                    <label class="form-label text-uppercase small fw-semibold" for="telerange_value_<?php echo e($piToken); ?>">Telerange %</label>
                                     <div class="input-group input-group-sm">
-                                        <input class="form-control" type="number" step="0.01" min="0" id="lc_tolerance_value_<?php echo e($piToken); ?>" value="<?php echo e($lcTolerancePercentage); ?>" data-lc-tolerance-input <?php echo $lcToleranceEnabled ? '' : 'disabled'; ?>>
+                                        <input class="form-control" type="number" step="0.01" min="0" id="telerange_value_<?php echo e($piToken); ?>" value="<?php echo e($telerangePercentage); ?>" data-telerange-input>
                                         <span class="input-group-text">%</span>
                                     </div>
+                                </div>
+                                <div class="col-lg-1 d-flex align-items-end">
+                                    <button class="btn btn-outline-secondary w-100" type="button" data-action="save-pi-details" data-pi-token="<?php echo e($piToken); ?>">Save</button>
                                 </div>
                             </div>
                             <div class="text-muted small mt-2">Bank letters append the PI header to “Opening L/C for Import”.</div>
