@@ -126,17 +126,86 @@ document.addEventListener('DOMContentLoaded', () => {
         element.className = `alert alert-${type}`;
     };
 
+    const setToleranceVisibility = (wrapper, input, enabled) => {
+        if (!wrapper) {
+            return;
+        }
+
+        if (enabled) {
+            wrapper.classList.remove('d-none');
+            wrapper.style.display = '';
+        } else {
+            wrapper.classList.add('d-none');
+            wrapper.style.display = 'none';
+        }
+
+        if (!input) {
+            return;
+        }
+
+        if (enabled) {
+            input.disabled = false;
+            input.removeAttribute('disabled');
+
+            if (!input.value || parseNumber(input.value) === 0) {
+                input.value = '10.00';
+            }
+        } else {
+            input.value = '0.00';
+            input.disabled = true;
+            input.setAttribute('disabled', 'disabled');
+        }
+    };
+
+    const syncCardToleranceState = (card) => {
+        if (!card) {
+            return;
+        }
+
+        const piTokenValue = card.getAttribute('data-pi-token') || '';
+        const toggle = card.querySelector('[data-lc-tolerance-toggle]');
+        const wrapper = card.querySelector('[data-lc-tolerance-wrapper]');
+        const input = wrapper ? wrapper.querySelector('[data-lc-tolerance-input]') : null;
+        const stateProforma = piTokenValue
+            ? state.proformas.find((item) => item.token === piTokenValue)
+            : null;
+
+        if (!toggle && !wrapper) {
+            return;
+        }
+
+        let enabled = false;
+        let value = input && input.value ? input.value : '0.00';
+
+        if (stateProforma) {
+            const storedValue = toCurrency(stateProforma.lc_tolerance_percentage || '0');
+            enabled = Boolean(stateProforma.lc_tolerance_enabled) || parseNumber(storedValue) > 0;
+            value = storedValue;
+        } else if (toggle) {
+            enabled = toggle.checked;
+        }
+
+        if (toggle) {
+            toggle.checked = enabled;
+        }
+
+        if (input) {
+            input.value = enabled ? toCurrency(value) : '0.00';
+        }
+
+        setToleranceVisibility(wrapper, input, enabled);
+    };
+
     const toggleCreateTolerance = () => {
         if (!createToleranceWrapper || !createToleranceInput || !createToleranceToggle) {
             return;
         }
 
         const enabled = createToleranceToggle.checked;
-        createToleranceWrapper.classList.toggle('d-none', !enabled);
-        createToleranceInput.disabled = !enabled;
+        setToleranceVisibility(createToleranceWrapper, createToleranceInput, enabled);
 
-        if (enabled && !createToleranceInput.value.trim()) {
-            createToleranceInput.value = '10.00';
+        if (enabled) {
+            createToleranceInput.focus();
         }
     };
 
@@ -1312,7 +1381,10 @@ document.addEventListener('DOMContentLoaded', () => {
         piList.innerHTML = '';
 
         state.proformas.forEach((proforma) => {
-            piList.append(renderProformaCard(proforma));
+            const cardWrapper = renderProformaCard(proforma);
+            piList.append(cardWrapper);
+            const card = cardWrapper.querySelector('.card[data-pi-token]');
+            syncCardToleranceState(card);
         });
 
         if (noPiMessage) {
@@ -1756,12 +1828,11 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
             });
 
-            piList.addEventListener('change', (event) => {
-                if (!event.target.matches('[data-lc-tolerance-toggle]')) {
+            const handleToleranceToggleChange = (toggle) => {
+                if (!toggle) {
                     return;
                 }
 
-                const toggle = event.target;
                 const card = toggle.closest('.card[data-pi-token]');
                 const wrapper = card ? card.querySelector('[data-lc-tolerance-wrapper]') : null;
                 const input = wrapper ? wrapper.querySelector('[data-lc-tolerance-input]') : null;
@@ -1775,18 +1846,11 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
 
                 const enabled = toggle.checked;
-                wrapper.classList.toggle('d-none', !enabled);
+                setToleranceVisibility(wrapper, input, enabled);
 
-                if (input) {
-                    input.disabled = !enabled;
-
-                    if (enabled) {
-                        if (!input.value || parseNumber(input.value) === 0) {
-                            input.value = '10.00';
-                        }
-                    } else {
-                        input.value = '0.00';
-                    }
+                if (enabled && input) {
+                    input.focus();
+                    input.select();
                 }
 
                 if (stateProforma) {
@@ -1795,6 +1859,24 @@ document.addEventListener('DOMContentLoaded', () => {
                     stateProforma.lc_tolerance_enabled = enabled;
                     stateProforma.lc_tolerance_percentage = normalisedValue;
                     stateProforma.lc_tolerance_percentage_formatted = normalisedValue;
+                }
+            };
+
+            piList.addEventListener('change', (event) => {
+                const toggle = event.target.matches('[data-lc-tolerance-toggle]')
+                    ? event.target
+                    : null;
+
+                if (toggle) {
+                    handleToleranceToggleChange(toggle);
+                }
+            });
+
+            piList.addEventListener('click', (event) => {
+                const toggle = event.target.closest('[data-lc-tolerance-toggle]');
+
+                if (toggle) {
+                    window.requestAnimationFrame(() => handleToleranceToggleChange(toggle));
                 }
             });
 
@@ -1946,6 +2028,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
         if (createToleranceToggle) {
             createToleranceToggle.addEventListener('change', toggleCreateTolerance);
+            createToleranceToggle.addEventListener('click', () => {
+                window.requestAnimationFrame(toggleCreateTolerance);
+            });
         }
     };
 
