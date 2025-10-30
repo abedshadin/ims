@@ -12,7 +12,7 @@
         $bankReferenceCode = (string) ($file['bank_reference'] ?? '');
     }
     ?>
-    <div class="workspace-hero shadow-sm mb-4">
+    <div class="workspace-hero shadow-sm mb-4 p-2 round">
         <div class="workspace-hero__content">
             <div class="workspace-hero__row">
                 <div>
