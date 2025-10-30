@@ -85,7 +85,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const piList = document.getElementById('piList');
     const noPiMessage = document.getElementById('noPiMessage');
     const createPiForm = document.getElementById('createPiForm');
-    const createToleranceToggle = document.querySelector('[data-create-lc-tolerance-toggle]');
+    const createToleranceCheck = document.querySelector('[data-create-lc-tolerance-check]');
     const createToleranceWrapper = document.querySelector('[data-create-lc-tolerance-wrapper]');
     const createToleranceInput = createToleranceWrapper
         ? createToleranceWrapper.querySelector('[data-create-lc-tolerance-input]') || createToleranceWrapper.querySelector('input')
@@ -169,14 +169,14 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         const piTokenValue = card.getAttribute('data-pi-token') || '';
-        const toggle = card.querySelector('[data-lc-tolerance-toggle]');
+        const check = card.querySelector('[data-lc-tolerance-check]');
         const wrapper = card.querySelector('[data-lc-tolerance-wrapper]');
         const input = wrapper ? wrapper.querySelector('[data-lc-tolerance-input]') : null;
         const stateProforma = piTokenValue
             ? state.proformas.find((item) => item.token === piTokenValue)
             : null;
 
-        if (!toggle && !wrapper) {
+        if (!check && !wrapper) {
             return;
         }
 
@@ -187,12 +187,12 @@ document.addEventListener('DOMContentLoaded', () => {
             const storedValue = toCurrency(stateProforma.lc_tolerance_percentage || '0');
             enabled = Boolean(stateProforma.lc_tolerance_enabled) || parseNumber(storedValue) > 0;
             value = storedValue;
-        } else if (toggle) {
-            enabled = toggle.checked;
+        } else if (check) {
+            enabled = check.checked;
         }
 
-        if (toggle) {
-            toggle.checked = enabled;
+        if (check) {
+            check.checked = enabled;
         }
 
         if (input) {
@@ -202,16 +202,17 @@ document.addEventListener('DOMContentLoaded', () => {
         setToleranceVisibility(wrapper, input, enabled);
     };
 
-    const toggleCreateTolerance = () => {
-        if (!createToleranceWrapper || !createToleranceInput || !createToleranceToggle) {
+    const syncCreateToleranceChecklist = () => {
+        if (!createToleranceWrapper || !createToleranceInput) {
             return;
         }
 
-        const enabled = createToleranceToggle.checked;
+        const enabled = Boolean(createToleranceCheck && createToleranceCheck.checked);
         setToleranceVisibility(createToleranceWrapper, createToleranceInput, enabled);
 
         if (enabled) {
             createToleranceInput.focus();
+            createToleranceInput.select();
         }
     };
 
@@ -1239,10 +1240,11 @@ document.addEventListener('DOMContentLoaded', () => {
                                 <button class="btn btn-outline-secondary w-100" type="button" data-action="save-pi-details" data-pi-token="${escapeHtml(proforma.token || '')}">Save</button>
                             </div>
                             <div class="col-lg-4">
-                                <div class="form-check form-switch mt-1">
-                                    <input class="form-check-input" type="checkbox" role="switch" data-lc-tolerance-toggle ${toleranceEnabled ? 'checked' : ''}>
-                                    <label class="form-check-label text-uppercase small fw-semibold">Enable L/C Tolerance</label>
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" id="lc_tolerance_check_${escapeHtml(proforma.token || '')}" data-lc-tolerance-check ${toleranceEnabled ? 'checked' : ''}>
+                                    <label class="form-check-label text-uppercase small fw-semibold" for="lc_tolerance_check_${escapeHtml(proforma.token || '')}">Include L/C Tolerance</label>
                                 </div>
+                                <p class="text-muted small mb-0">Tick to show the tolerance percentage on generated ToC letters.</p>
                             </div>
                             <div class="col-lg-3 ${toleranceWrapperClass}" data-lc-tolerance-wrapper>
                                 <label class="form-label text-uppercase small fw-semibold">Tolerance %</label>
@@ -1590,7 +1592,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         }
                         refreshPiList();
                         createPiForm.reset();
-                        toggleCreateTolerance();
+                        syncCreateToleranceChecklist();
                     }
 
                     if (result.file_meta) {
@@ -1734,7 +1736,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
                     const headerInput = card.querySelector('[data-pi-header-input]');
                     const referenceDateInput = card.querySelector('[data-bank-ref-date]');
-                    const toleranceToggle = card.querySelector('[data-lc-tolerance-toggle]');
+                    const toleranceCheck = card.querySelector('[data-lc-tolerance-check]');
                     const toleranceWrapper = card.querySelector('[data-lc-tolerance-wrapper]');
                     const toleranceInput = toleranceWrapper ? toleranceWrapper.querySelector('[data-lc-tolerance-input]') : null;
                     const originalText = actionButton.innerHTML;
@@ -1748,7 +1750,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         formData.set('pi_token', piToken);
                         formData.set('pi_header', headerInput ? headerInput.value : '');
                         formData.set('reference_date', referenceDateInput ? referenceDateInput.value : '');
-                        const toleranceEnabled = toleranceToggle ? toleranceToggle.checked : false;
+                        const toleranceEnabled = toleranceCheck ? toleranceCheck.checked : false;
                         formData.set('lc_tolerance_enabled', toleranceEnabled ? '1' : '0');
                         formData.set('lc_tolerance_percentage', toleranceEnabled && toleranceInput ? toleranceInput.value : '');
 
@@ -1835,12 +1837,12 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
             });
 
-            const handleToleranceToggleChange = (toggle) => {
-                if (!toggle) {
+            const handleToleranceCheckChange = (check) => {
+                if (!check) {
                     return;
                 }
 
-                const card = toggle.closest('.card[data-pi-token]');
+                const card = check.closest('.card[data-pi-token]');
                 const wrapper = card ? card.querySelector('[data-lc-tolerance-wrapper]') : null;
                 const input = wrapper ? wrapper.querySelector('[data-lc-tolerance-input]') : null;
                 const piTokenValue = card ? card.getAttribute('data-pi-token') : '';
@@ -1852,7 +1854,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     return;
                 }
 
-                const enabled = toggle.checked;
+                const enabled = check.checked;
                 setToleranceVisibility(wrapper, input, enabled);
 
                 if (enabled && input) {
@@ -1870,20 +1872,20 @@ document.addEventListener('DOMContentLoaded', () => {
             };
 
             piList.addEventListener('change', (event) => {
-                const toggle = event.target.matches('[data-lc-tolerance-toggle]')
+                const check = event.target.matches('[data-lc-tolerance-check]')
                     ? event.target
                     : null;
 
-                if (toggle) {
-                    handleToleranceToggleChange(toggle);
+                if (check) {
+                    handleToleranceCheckChange(check);
                 }
             });
 
             piList.addEventListener('click', (event) => {
-                const toggle = event.target.closest('[data-lc-tolerance-toggle]');
+                const check = event.target.closest('[data-lc-tolerance-check]');
 
-                if (toggle) {
-                    window.requestAnimationFrame(() => handleToleranceToggleChange(toggle));
+                if (check) {
+                    window.requestAnimationFrame(() => handleToleranceCheckChange(check));
                 }
             });
 
@@ -2031,12 +2033,12 @@ document.addEventListener('DOMContentLoaded', () => {
             });
         }
 
-        toggleCreateTolerance();
+        syncCreateToleranceChecklist();
 
-        if (createToleranceToggle) {
-            createToleranceToggle.addEventListener('change', toggleCreateTolerance);
-            createToleranceToggle.addEventListener('click', () => {
-                window.requestAnimationFrame(toggleCreateTolerance);
+        if (createToleranceCheck) {
+            createToleranceCheck.addEventListener('change', syncCreateToleranceChecklist);
+            createToleranceCheck.addEventListener('click', () => {
+                window.requestAnimationFrame(syncCreateToleranceChecklist);
             });
         }
     };
