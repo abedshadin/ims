@@ -32,6 +32,8 @@ $fileToken = trim($_POST['file_token'] ?? '');
 $invoiceNumber = trim($_POST['invoice_number'] ?? '');
 $piHeader = trim($_POST['pi_header'] ?? '');
 $freightAmountRaw = trim($_POST['freight_amount'] ?? '');
+$lcToleranceEnabledRaw = $_POST['lc_tolerance_enabled'] ?? '';
+$lcTolerancePercentageRaw = trim($_POST['lc_tolerance_percentage'] ?? '');
 
 if ($fileToken === '' || ($fileId = IdCipher::decode($fileToken)) === null) {
     http_response_code(422);
@@ -54,6 +56,8 @@ if ($invoiceNumber === '') {
 $piHeader = mb_substr($piHeader, 0, 255);
 
 $freightAmount = 0.0;
+$lcToleranceEnabled = false;
+$lcTolerancePercentage = 10.0;
 
 if ($freightAmountRaw !== '') {
     if (!is_numeric($freightAmountRaw)) {
@@ -75,6 +79,37 @@ if ($freightAmountRaw !== '') {
         ]);
         exit;
     }
+}
+
+if ($lcToleranceEnabledRaw !== '') {
+    $lcToleranceEnabled = filter_var($lcToleranceEnabledRaw, FILTER_VALIDATE_BOOL, FILTER_NULL_ON_FAILURE);
+    $lcToleranceEnabled = $lcToleranceEnabled === null ? false : $lcToleranceEnabled;
+}
+
+if ($lcToleranceEnabled) {
+    if ($lcTolerancePercentageRaw === '') {
+        $lcTolerancePercentage = 10.0;
+    } elseif (!is_numeric($lcTolerancePercentageRaw)) {
+        http_response_code(422);
+        echo json_encode([
+            'status' => 'error',
+            'message' => 'Provide a numeric L/C tolerance percentage when enabled.',
+        ]);
+        exit;
+    } else {
+        $lcTolerancePercentage = (float) $lcTolerancePercentageRaw;
+
+        if ($lcTolerancePercentage < 0 || $lcTolerancePercentage > 1000) {
+            http_response_code(422);
+            echo json_encode([
+                'status' => 'error',
+                'message' => 'The L/C tolerance percentage must be between 0 and 1000.',
+            ]);
+            exit;
+        }
+    }
+} else {
+    $lcTolerancePercentage = 0.0;
 }
 
 try {
@@ -101,13 +136,15 @@ try {
     $pdo->beginTransaction();
 
     $insertStatement = $pdo->prepare(
-        'INSERT INTO proforma_invoices (vendor_file_id, invoice_number, pi_header, freight_amount, created_at, created_by) '
-        . 'VALUES (:vendor_file_id, :invoice_number, :pi_header, :freight_amount, NOW(), :created_by)'
+        'INSERT INTO proforma_invoices (vendor_file_id, invoice_number, pi_header, lc_tolerance_enabled, lc_tolerance_percentage, freight_amount, created_at, created_by) '
+        . 'VALUES (:vendor_file_id, :invoice_number, :pi_header, :lc_tolerance_enabled, :lc_tolerance_percentage, :freight_amount, NOW(), :created_by)'
     );
     $insertStatement->execute([
         ':vendor_file_id' => $fileId,
         ':invoice_number' => $invoiceNumber,
         ':pi_header' => $piHeader,
+        ':lc_tolerance_enabled' => $lcToleranceEnabled ? 1 : 0,
+        ':lc_tolerance_percentage' => $lcToleranceEnabled ? $lcTolerancePercentage : 0,
         ':freight_amount' => $freightAmount,
         ':created_by' => Auth::userId(),
     ]);
@@ -148,6 +185,9 @@ try {
             'token' => $piToken,
             'invoice_number' => $invoiceNumber,
             'pi_header' => $piHeader,
+            'lc_tolerance_enabled' => $lcToleranceEnabled,
+            'lc_tolerance_percentage' => $lcToleranceEnabled ? number_format($lcTolerancePercentage, 2, '.', '') : '0.00',
+            'lc_tolerance_percentage_formatted' => $lcToleranceEnabled ? number_format($lcTolerancePercentage, 2) : '0.00',
             'freight_amount' => number_format($freightAmount, 2, '.', ''),
             'created_at' => $createdAt,
             'created_at_human' => date('j M Y, g:i A', strtotime($createdAt)),

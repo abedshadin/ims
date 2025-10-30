@@ -31,6 +31,8 @@ if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
 $piToken = trim($_POST['pi_token'] ?? '');
 $piHeader = trim($_POST['pi_header'] ?? '');
 $referenceDateInput = trim($_POST['reference_date'] ?? '');
+$lcToleranceEnabledRaw = $_POST['lc_tolerance_enabled'] ?? '';
+$lcTolerancePercentageRaw = trim($_POST['lc_tolerance_percentage'] ?? '');
 
 if ($piToken === '' || ($piId = IdCipher::decode($piToken)) === null) {
     http_response_code(422);
@@ -42,6 +44,37 @@ if ($piToken === '' || ($piId = IdCipher::decode($piToken)) === null) {
 }
 
 $piHeader = mb_substr($piHeader, 0, 255);
+$lcToleranceEnabled = false;
+$lcTolerancePercentage = 0.0;
+
+if ($lcToleranceEnabledRaw !== '') {
+    $lcToleranceEnabled = filter_var($lcToleranceEnabledRaw, FILTER_VALIDATE_BOOL, FILTER_NULL_ON_FAILURE);
+    $lcToleranceEnabled = $lcToleranceEnabled === null ? false : $lcToleranceEnabled;
+}
+
+if ($lcToleranceEnabled) {
+    if ($lcTolerancePercentageRaw === '') {
+        $lcTolerancePercentage = 10.0;
+    } elseif (!is_numeric($lcTolerancePercentageRaw)) {
+        http_response_code(422);
+        echo json_encode([
+            'status' => 'error',
+            'message' => 'Provide a numeric L/C tolerance percentage when enabled.',
+        ]);
+        exit;
+    } else {
+        $lcTolerancePercentage = (float) $lcTolerancePercentageRaw;
+
+        if ($lcTolerancePercentage < 0 || $lcTolerancePercentage > 1000) {
+            http_response_code(422);
+            echo json_encode([
+                'status' => 'error',
+                'message' => 'The L/C tolerance percentage must be between 0 and 1000.',
+            ]);
+            exit;
+        }
+    }
+}
 
 try {
     $pdo = Database::getConnection();
@@ -69,10 +102,12 @@ try {
     $pdo->beginTransaction();
 
     $updateProforma = $pdo->prepare(
-        'UPDATE proforma_invoices SET pi_header = :pi_header WHERE id = :id'
+        'UPDATE proforma_invoices SET pi_header = :pi_header, lc_tolerance_enabled = :lc_tolerance_enabled, lc_tolerance_percentage = :lc_tolerance_percentage WHERE id = :id'
     );
     $updateProforma->execute([
         ':pi_header' => $piHeader,
+        ':lc_tolerance_enabled' => $lcToleranceEnabled ? 1 : 0,
+        ':lc_tolerance_percentage' => $lcToleranceEnabled ? $lcTolerancePercentage : 0,
         ':id' => $piId,
     ]);
 
@@ -105,6 +140,9 @@ try {
             'token' => $piTokenEncoded,
             'invoice_number' => (string) $invoice['invoice_number'],
             'pi_header' => $piHeader,
+            'lc_tolerance_enabled' => $lcToleranceEnabled,
+            'lc_tolerance_percentage' => $lcToleranceEnabled ? number_format($lcTolerancePercentage, 2, '.', '') : '0.00',
+            'lc_tolerance_percentage_formatted' => $lcToleranceEnabled ? number_format($lcTolerancePercentage, 2) : '0.00',
             'reference' => [
                 'code' => $reference['code'] ?? null,
                 'date' => $reference['date'] ?? null,
