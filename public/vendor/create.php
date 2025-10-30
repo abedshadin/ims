@@ -58,6 +58,10 @@ function e(string $value): string
                         <input class="form-control" type="text" id="beneficiary_bank_address" name="beneficiary_bank_address" required>
                     </div>
                     <div class="col-md-6">
+                        <label class="form-label" for="beneficiary_bank_account">Beneficiary Bank Acc No</label>
+                        <input class="form-control" type="text" id="beneficiary_bank_account" name="beneficiary_bank_account" required>
+                    </div>
+                    <div class="col-md-6">
                         <label class="form-label" for="beneficiary_swift">Beneficiary SWIFT</label>
                         <input class="form-control" type="text" id="beneficiary_swift" name="beneficiary_swift" required>
                     </div>

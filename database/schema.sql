@@ -12,6 +12,7 @@ CREATE TABLE IF NOT EXISTS vendors (
     vendor_address VARCHAR(255) NOT NULL,
     beneficiary_bank_name VARCHAR(255) NOT NULL,
     beneficiary_bank_address VARCHAR(255) NOT NULL,
+    beneficiary_bank_account VARCHAR(100) NOT NULL,
     beneficiary_swift VARCHAR(50) NOT NULL,
     advising_bank_name VARCHAR(255) NOT NULL,
     advising_bank_account VARCHAR(100) NOT NULL,
