@@ -703,11 +703,6 @@ document.addEventListener('DOMContentLoaded', () => {
         const beneficiaryBank = file.beneficiary_bank_name || '';
         const beneficiarySwift = file.beneficiary_swift || '';
         const beneficiaryAccount = file.beneficiary_bank_account || '';
-        const toleranceNumeric = parseNumber(proforma.tolerance_percentage);
-        const toleranceDisplay = formatToleranceValue(proforma.tolerance_percentage);
-        const toleranceText = toleranceNumeric > 0
-            ? `; Tolerance ${escapeHtml(toleranceDisplay)}%`
-            : '';
 
         const lcLine = advisingBankName
             ? `Please arrange to through L/C to <strong>${escapeHtml(advisingBankName)}, SWIFT CODE: ${escapeHtml(advisingSwift || 'N/A')}, A/C NO. ${escapeHtml(advisingAccount || 'N/A')}</strong>; For Payment to <strong>${escapeHtml(beneficiaryBank || 'Beneficiary Bank')}, SWIFT CODE: ${escapeHtml(beneficiarySwift || 'N/A')}, ${escapeHtml(file.vendor_name || 'VENDOR NAME')}, A/C NO. ${escapeHtml(beneficiaryAccount || 'N/A')}</strong>.`
@@ -725,7 +720,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         <li>L/C number and date, &amp; H.S. Code no. ${escapeHtml(hsCodeString)} must appear in the Invoice.</li>
                         <li>
                             Description of Goods: ${productDescriptions}
-                            Freight ${escapeHtml(currencySymbol)} ${toCurrency(freightCost)}; Total Amount ${escapeHtml(currencySymbol)} ${toCurrency(grandTotal)}${toleranceText} as per Proforma Invoice No. ${escapeHtml(proforma.invoice_number || 'N/A')} Dated ${escapeHtml(piDate)}.
+                            Freight ${escapeHtml(currencySymbol)} ${toCurrency(freightCost)}; Total Amount ${escapeHtml(currencySymbol)} ${toCurrency(grandTotal)} as per Proforma Invoice No. ${escapeHtml(proforma.invoice_number || 'N/A')} Dated ${escapeHtml(piDate)}.
                         </li>
                         <li>Certificate of Origin issued by Chamber of Commerce.</li>
                         <li>
