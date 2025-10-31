@@ -32,6 +32,7 @@ $fileToken = trim($_POST['file_token'] ?? '');
 $invoiceNumber = trim($_POST['invoice_number'] ?? '');
 $piHeader = trim($_POST['pi_header'] ?? '');
 $freightAmountRaw = trim($_POST['freight_amount'] ?? '');
+$toleranceRaw = trim($_POST['tolerance_percentage'] ?? '');
 
 if ($fileToken === '' || ($fileId = IdCipher::decode($fileToken)) === null) {
     http_response_code(422);
@@ -54,6 +55,7 @@ if ($invoiceNumber === '') {
 $piHeader = mb_substr($piHeader, 0, 255);
 
 $freightAmount = 0.0;
+$tolerancePercentage = 0.0;
 
 if ($freightAmountRaw !== '') {
     if (!is_numeric($freightAmountRaw)) {
@@ -76,6 +78,30 @@ if ($freightAmountRaw !== '') {
         exit;
     }
 }
+
+if ($toleranceRaw !== '') {
+    if (!is_numeric($toleranceRaw)) {
+        http_response_code(422);
+        echo json_encode([
+            'status' => 'error',
+            'message' => 'Tolerance must be provided as a numeric percentage.',
+        ]);
+        exit;
+    }
+
+    $tolerancePercentage = (float) $toleranceRaw;
+
+    if ($tolerancePercentage < 0 || $tolerancePercentage > 100) {
+        http_response_code(422);
+        echo json_encode([
+            'status' => 'error',
+            'message' => 'Tolerance must be between 0 and 100 percent.',
+        ]);
+        exit;
+    }
+}
+
+$tolerancePercentage = round($tolerancePercentage, 2);
 
 try {
     $pdo = Database::getConnection();
@@ -101,14 +127,15 @@ try {
     $pdo->beginTransaction();
 
     $insertStatement = $pdo->prepare(
-        'INSERT INTO proforma_invoices (vendor_file_id, invoice_number, pi_header, freight_amount, created_at, created_by) '
-        . 'VALUES (:vendor_file_id, :invoice_number, :pi_header, :freight_amount, NOW(), :created_by)'
+        'INSERT INTO proforma_invoices (vendor_file_id, invoice_number, pi_header, freight_amount, tolerance_percentage, created_at, created_by) '
+        . 'VALUES (:vendor_file_id, :invoice_number, :pi_header, :freight_amount, :tolerance_percentage, NOW(), :created_by)'
     );
     $insertStatement->execute([
         ':vendor_file_id' => $fileId,
         ':invoice_number' => $invoiceNumber,
         ':pi_header' => $piHeader,
         ':freight_amount' => $freightAmount,
+        ':tolerance_percentage' => $tolerancePercentage,
         ':created_by' => Auth::userId(),
     ]);
 
@@ -149,6 +176,8 @@ try {
             'invoice_number' => $invoiceNumber,
             'pi_header' => $piHeader,
             'freight_amount' => number_format($freightAmount, 2, '.', ''),
+            'tolerance_percentage' => number_format($tolerancePercentage, 2, '.', ''),
+            'tolerance_percentage_formatted' => number_format($tolerancePercentage, 2),
             'created_at' => $createdAt,
             'created_at_human' => date('j M Y, g:i A', strtotime($createdAt)),
             'products' => [],

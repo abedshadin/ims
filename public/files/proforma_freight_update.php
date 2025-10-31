@@ -29,6 +29,7 @@ if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
 
 $piToken = trim($_POST['pi_token'] ?? '');
 $freightRaw = trim($_POST['freight_amount'] ?? '');
+$toleranceRaw = trim($_POST['tolerance_percentage'] ?? '');
 
 if ($piToken === '' || ($piId = IdCipher::decode($piToken)) === null) {
     http_response_code(422);
@@ -63,6 +64,32 @@ if ($freight < 0) {
     exit;
 }
 
+$tolerance = 0.0;
+
+if ($toleranceRaw !== '') {
+    if (!is_numeric($toleranceRaw)) {
+        http_response_code(422);
+        echo json_encode([
+            'status' => 'error',
+            'message' => 'Tolerance must be provided as a numeric percentage.',
+        ]);
+        exit;
+    }
+
+    $tolerance = (float) $toleranceRaw;
+}
+
+if ($tolerance < 0 || $tolerance > 100) {
+    http_response_code(422);
+    echo json_encode([
+        'status' => 'error',
+        'message' => 'Tolerance must be between 0 and 100 percent.',
+    ]);
+    exit;
+}
+
+$tolerance = round($tolerance, 2);
+
 try {
     $pdo = Database::getConnection();
 
@@ -84,10 +111,11 @@ try {
     $pdo->beginTransaction();
 
     $update = $pdo->prepare(
-        'UPDATE proforma_invoices SET freight_amount = :freight_amount WHERE id = :id'
+        'UPDATE proforma_invoices SET freight_amount = :freight_amount, tolerance_percentage = :tolerance_percentage WHERE id = :id'
     );
     $update->execute([
         ':freight_amount' => $freight,
+        ':tolerance_percentage' => $tolerance,
         ':id' => $piId,
     ]);
 
@@ -108,6 +136,8 @@ try {
         'message' => 'Freight saved.',
         'freight_amount' => number_format($freight, 2, '.', ''),
         'freight_amount_formatted' => number_format($freight, 2),
+        'tolerance_percentage' => number_format($tolerance, 2, '.', ''),
+        'tolerance_percentage_formatted' => number_format($tolerance, 2),
         'file_meta' => $fileMeta,
     ]);
 } catch (PDOException $exception) {
