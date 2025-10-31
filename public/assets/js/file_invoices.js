@@ -710,7 +710,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         const toleranceValue = parseNumber(proforma.tolerance_percentage ?? proforma.tolerance_percentage_formatted ?? 0);
         const toleranceLine = toleranceValue > 0
-            ? `<li>This is a tolerance limit of ${escapeHtml(formatToleranceValue(toleranceValue))}%.</li>`
+            ? `<li>L/C allows ${escapeHtml(formatToleranceValue(toleranceValue))}% tolerance in amount & qty..</li>`
             : '';
 
         return `
