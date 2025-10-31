@@ -54,7 +54,7 @@ if ($fileId === null) {
             $vendorProducts = $vendorProductsStatement->fetchAll() ?: [];
 
             $proformaStatement = $pdo->prepare(
-                'SELECT id, invoice_number, pi_header, freight_amount, created_at
+                'SELECT id, invoice_number, pi_header, freight_amount, tolerance_percentage, created_at
                  FROM proforma_invoices
                  WHERE vendor_file_id = :file_id
                  ORDER BY created_at DESC, id DESC'
@@ -151,6 +151,8 @@ if ($fileId === null) {
                     'pi_header' => (string) $row['pi_header'],
                     'freight_amount' => number_format((float) $row['freight_amount'], 2, '.', ''),
                     'freight_amount_formatted' => number_format((float) $row['freight_amount'], 2),
+                    'tolerance_percentage' => number_format((float) ($row['tolerance_percentage'] ?? 0), 2, '.', ''),
+                    'tolerance_percentage_formatted' => number_format((float) ($row['tolerance_percentage'] ?? 0), 2),
                     'created_at' => (string) $row['created_at'],
                     'created_at_human' => date('j M Y, g:i A', strtotime((string) $row['created_at'])),
                     'products' => $products,
