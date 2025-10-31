@@ -146,7 +146,7 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     };
 
-    const parseNumber = (value) => {
+    function parseNumber(value) {
         if (typeof value === 'number') {
             return Number.isFinite(value) ? value : 0;
         }
@@ -159,7 +159,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const parsed = Number.parseFloat(sanitised);
 
         return Number.isNaN(parsed) ? 0 : parsed;
-    };
+    }
 
     const toCurrency = (value) => {
         return parseNumber(value).toFixed(2);
@@ -197,7 +197,7 @@ document.addEventListener('DOMContentLoaded', () => {
         return `${sign}${number.toFixed(2)}%`;
     };
 
-    const formatToleranceValue = (value) => {
+    function formatToleranceValue(value) {
         const number = parseNumber(value);
 
         if (!Number.isFinite(number) || number < 0) {
@@ -205,7 +205,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         return number.toFixed(2);
-    };
+    }
 
     const formatTolerance = (value) => `${formatToleranceValue(value)}%`;
 
