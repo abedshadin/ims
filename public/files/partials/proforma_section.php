@@ -18,14 +18,21 @@
                 <label class="form-label text-uppercase small fw-semibold" for="pi_header">PI Header</label>
                 <input class="form-control" type="text" id="pi_header" name="pi_header" placeholder="e.g. Frozen Fries">
             </div>
-            <div class="col-lg-3">
+            <div class="col-lg-2">
                 <label class="form-label text-uppercase small fw-semibold" for="freight_amount">Freight Amount</label>
                 <div class="input-group">
                     <span class="input-group-text">$</span>
                     <input class="form-control" type="number" step="0.01" id="freight_amount" name="freight_amount" placeholder="0.00">
                 </div>
             </div>
-            <div class="col-lg-3 d-flex align-items-end">
+            <div class="col-lg-2">
+                <label class="form-label text-uppercase small fw-semibold" for="tolerance_percentage">Tolerance %</label>
+                <div class="input-group">
+                    <span class="input-group-text">%</span>
+                    <input class="form-control" type="number" step="0.01" min="0" max="100" id="tolerance_percentage" name="tolerance_percentage" placeholder="0.00">
+                </div>
+            </div>
+            <div class="col-lg-2 d-flex align-items-end">
                 <button class="btn btn-primary w-100" type="submit">Add Proforma Invoice</button>
             </div>
         </form>
@@ -42,6 +49,8 @@
         $totalWeight = 0.0;
         $totalFob = 0.0;
         $lines = [];
+        $tolerancePercentage = (float) ($proforma['tolerance_percentage'] ?? 0);
+        $tolerancePercentageDisplay = number_format($tolerancePercentage, 2);
 
         foreach ($products as $product) {
             $quantity = (float) ($product['quantity'] ?? 0);
@@ -102,6 +111,7 @@
                                 <span class="badge rounded-pill text-bg-primary-subtle text-primary fw-semibold">PI</span>
                                 <h2 class="h5 mb-0">Proforma <?php echo e($proforma['invoice_number'] ?? ''); ?></h2>
                                 <span class="badge text-bg-light text-primary-emphasis">Freight $<?php echo e(number_format($freightAmount, 2)); ?></span>
+                                <span class="badge text-bg-secondary-subtle text-secondary">Tolerance <?php echo e($tolerancePercentageDisplay); ?>%</span>
                                 <?php if ($piHeaderValue !== ''): ?>
                                     <span class="badge text-bg-info-subtle text-info">Header: <?php echo e($piHeaderValue); ?></span>
                                 <?php endif; ?>
@@ -122,6 +132,10 @@
                             <div class="input-group input-group-sm">
                                 <span class="input-group-text">$</span>
                                 <input class="form-control" type="number" step="0.01" value="<?php echo e(number_format($freightAmount, 2, '.', '')); ?>" data-freight-input>
+                            </div>
+                            <div class="input-group input-group-sm">
+                                <span class="input-group-text">%</span>
+                                <input class="form-control" type="number" step="0.01" min="0" max="100" value="<?php echo e(number_format($tolerancePercentage, 2, '.', '')); ?>" data-tolerance-input>
                             </div>
                             <button class="btn btn-outline-primary btn-sm" type="button" data-action="save-freight" data-pi-token="<?php echo e($piToken); ?>">Save Freight</button>
                         </div>
