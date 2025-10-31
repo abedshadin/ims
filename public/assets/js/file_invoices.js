@@ -201,10 +201,10 @@ document.addEventListener('DOMContentLoaded', () => {
         const number = parseNumber(value);
 
         if (!Number.isFinite(number) || number < 0) {
-            return '0.00';
+            return '0';
         }
 
-        return number.toFixed(2);
+        return number.toFixed(0);
     }
 
     const formatTolerance = (value) => `${formatToleranceValue(value)}%`;
@@ -710,7 +710,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         const toleranceValue = parseNumber(proforma.tolerance_percentage ?? proforma.tolerance_percentage_formatted ?? 0);
         const toleranceLine = toleranceValue > 0
-            ? `<li>L/C allows ${escapeHtml(formatToleranceValue(toleranceValue))}% tolerance in amount & qty..</li>`
+            ? `<li>L/C allows ${escapeHtml(formatToleranceValue(toleranceValue))}% tolerance in amount & qty.</li>`
             : '';
 
         return `
