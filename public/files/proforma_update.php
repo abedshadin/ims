@@ -31,7 +31,6 @@ if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
 $piToken = trim($_POST['pi_token'] ?? '');
 $piHeader = trim($_POST['pi_header'] ?? '');
 $referenceDateInput = trim($_POST['reference_date'] ?? '');
-$telerangePercentageRaw = trim($_POST['telerange_percentage'] ?? '');
 
 if ($piToken === '' || ($piId = IdCipher::decode($piToken)) === null) {
     http_response_code(422);
@@ -43,30 +42,6 @@ if ($piToken === '' || ($piId = IdCipher::decode($piToken)) === null) {
 }
 
 $piHeader = mb_substr($piHeader, 0, 255);
-$telerangePercentage = 0.0;
-
-if ($telerangePercentageRaw !== '') {
-    if (!is_numeric($telerangePercentageRaw)) {
-        http_response_code(422);
-        echo json_encode([
-            'status' => 'error',
-            'message' => 'Provide the telerange percentage as a numeric value.',
-        ]);
-        exit;
-    }
-
-    $telerangePercentage = (float) $telerangePercentageRaw;
-
-    if ($telerangePercentage < 0 || $telerangePercentage > 1000) {
-        http_response_code(422);
-        echo json_encode([
-            'status' => 'error',
-            'message' => 'The telerange percentage must be between 0 and 1000.',
-        ]);
-        exit;
-    }
-}
-
 try {
     $pdo = Database::getConnection();
 
@@ -93,12 +68,10 @@ try {
     $pdo->beginTransaction();
 
     $updateProforma = $pdo->prepare(
-        'UPDATE proforma_invoices SET pi_header = :pi_header, lc_tolerance_enabled = :lc_tolerance_enabled, lc_tolerance_percentage = :lc_tolerance_percentage WHERE id = :id'
+        'UPDATE proforma_invoices SET pi_header = :pi_header WHERE id = :id'
     );
     $updateProforma->execute([
         ':pi_header' => $piHeader,
-        ':lc_tolerance_enabled' => 0,
-        ':lc_tolerance_percentage' => $telerangePercentage,
         ':id' => $piId,
     ]);
 
@@ -131,8 +104,6 @@ try {
             'token' => $piTokenEncoded,
             'invoice_number' => (string) $invoice['invoice_number'],
             'pi_header' => $piHeader,
-            'telerange_percentage' => number_format($telerangePercentage, 2, '.', ''),
-            'telerange_percentage_formatted' => number_format($telerangePercentage, 2),
             'reference' => [
                 'code' => $reference['code'] ?? null,
                 'date' => $reference['date'] ?? null,

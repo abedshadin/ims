@@ -71,8 +71,6 @@ CREATE TABLE IF NOT EXISTS proforma_invoices (
     vendor_file_id BIGINT UNSIGNED NOT NULL,
     invoice_number VARCHAR(100) NOT NULL,
     pi_header VARCHAR(255) NOT NULL DEFAULT '',
-    lc_tolerance_enabled TINYINT(1) NOT NULL DEFAULT 0,
-    lc_tolerance_percentage DECIMAL(6, 2) NOT NULL DEFAULT 10.00,
     freight_amount DECIMAL(15, 2) NOT NULL DEFAULT 0.00,
     created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
     created_by BIGINT UNSIGNED NULL,

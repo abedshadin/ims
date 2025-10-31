@@ -45,23 +45,10 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         const products = Array.isArray(proforma.products) ? proforma.products : [];
-        const telerangeRaw = proforma.telerange_percentage ?? proforma.telerange_percentage_formatted ?? '0';
-        let telerangeNumber = 0;
-
-        if (typeof telerangeRaw === 'number') {
-            telerangeNumber = Number.isFinite(telerangeRaw) ? telerangeRaw : 0;
-        } else if (typeof telerangeRaw === 'string') {
-            const numeric = Number.parseFloat(telerangeRaw.replace(/[^0-9+\-.,]/g, '').replace(/,/g, ''));
-            telerangeNumber = Number.isNaN(numeric) ? 0 : numeric;
-        }
-
-        const telerangeString = telerangeNumber.toFixed(2);
 
         return {
             ...proforma,
             pi_header: proforma.pi_header || '',
-            telerange_percentage: telerangeString,
-            telerange_percentage_formatted: telerangeString,
             freight_amount: proforma.freight_amount || proforma.freight_amount_formatted || '0.00',
             freight_amount_formatted: proforma.freight_amount_formatted || proforma.freight_amount || '0.00',
             products,
@@ -701,11 +688,6 @@ document.addEventListener('DOMContentLoaded', () => {
         const beneficiarySwift = file.beneficiary_swift || '';
         const beneficiaryAccount = file.beneficiary_bank_account || '';
 
-        const telerangeRaw = proforma.telerange_percentage ?? proforma.telerange_percentage_formatted ?? '0';
-        const telerangeValue = parseNumber(telerangeRaw);
-        const hasTelerange = telerangeValue > 0;
-        const telerangePercentage = telerangeValue.toFixed(2);
-
         const lcLine = advisingBankName
             ? `Please arrange to through L/C to <strong>${escapeHtml(advisingBankName)}, SWIFT CODE: ${escapeHtml(advisingSwift || 'N/A')}, A/C NO. ${escapeHtml(advisingAccount || 'N/A')}</strong>; For Payment to <strong>${escapeHtml(beneficiaryBank || 'Beneficiary Bank')}, SWIFT CODE: ${escapeHtml(beneficiarySwift || 'N/A')}, ${escapeHtml(file.vendor_name || 'VENDOR NAME')}, A/C NO. ${escapeHtml(beneficiaryAccount || 'N/A')}</strong>.`
             : `Please open irrevocable L/C through <strong>${escapeHtml(beneficiaryBank || 'Beneficiary Bank')}, SWIFT Code: ${escapeHtml(beneficiarySwift || 'N/A')}.</strong>`;
@@ -738,7 +720,6 @@ document.addEventListener('DOMContentLoaded', () => {
                         <li>Importer’s Name: Transcom Foods Limited, Address: SE (F) 5, Gulshan Avenue, Gulshan, Dhaka-1212, Bangladesh and E-TIN No. 892580838781, must be clearly mentioned / printed in the packets/cartons.</li>
                         <li>E-TIN No. 892580838781, BIN No. 000002132-0101 must appear in the invoice and packing list.</li>
                         <li>The beneficiary must send the shipment advice to Reliance Insurance Ltd. at their E-mail ID: <a href="mailto:info@reliance.com.bd">info@reliance.com.bd</a>.</li>
-                        ${hasTelerange ? `<li>Telerange percentage: ${escapeHtml(telerangePercentage)}%.</li>` : ''}
                     </ol>
                     <div class="sig-row mt-auto">
                         <div class="sig text-start">Authorized Signature</div>
@@ -1083,8 +1064,6 @@ document.addEventListener('DOMContentLoaded', () => {
         const referenceDateFormatted = reference.date_formatted
             || (reference.date ? formatDate(reference.date, { day: '2-digit', month: 'short', year: 'numeric' }) : '');
         const freightValue = toCurrency(proforma.freight_amount || metrics.totalFreight || 0);
-        const telerangeValueRaw = proforma.telerange_percentage || proforma.telerange_percentage_formatted || '0';
-        const telerangeValue = toCurrency(telerangeValueRaw);
         const totalWeightDisplay = formatWeight(metrics.totalWeight);
         const freightPerWeightDisplay = parseNumber(metrics.freightPerWeight).toFixed(4);
         const totalFobDisplay = toCurrency(metrics.totalFob);
@@ -1125,7 +1104,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 <div class="card bg-light border-0 mt-3">
                     <div class="card-body py-3">
                         <div class="row g-3 align-items-end">
-                            <div class="col-lg-3">
+                            <div class="col-lg-4">
                                 <label class="form-label text-uppercase small fw-semibold" for="pi_header_${escapeHtml(proforma.token || '')}">PI Header</label>
                                 <input class="form-control form-control-sm" type="text" id="pi_header_${escapeHtml(proforma.token || '')}" value="${escapeHtml(piHeaderValue)}" data-pi-header-input>
                             </div>
@@ -1138,14 +1117,7 @@ document.addEventListener('DOMContentLoaded', () => {
                                 <input class="form-control form-control-sm" type="date" id="bank_ref_date_${escapeHtml(proforma.token || '')}" value="${escapeHtml(reference.date)}" data-bank-ref-date>
                                 ${referenceDateFormatted ? `<div class="text-muted small mt-1">Saved as ${escapeHtml(referenceDateFormatted)}</div>` : ''}
                             </div>
-                            <div class="col-lg-2">
-                                <label class="form-label text-uppercase small fw-semibold" for="telerange_value_${escapeHtml(proforma.token || '')}">Telerange %</label>
-                                <div class="input-group input-group-sm">
-                                    <input class="form-control" type="number" step="0.01" min="0" id="telerange_value_${escapeHtml(proforma.token || '')}" value="${escapeHtml(telerangeValue)}" data-telerange-input>
-                                    <span class="input-group-text">%</span>
-                                </div>
-                            </div>
-                            <div class="col-lg-1 d-flex align-items-end">
+                            <div class="col-lg-2 d-flex align-items-end">
                                 <button class="btn btn-outline-secondary w-100" type="button" data-action="save-pi-details" data-pi-token="${escapeHtml(proforma.token || '')}">Save</button>
                             </div>
                         </div>
@@ -1623,7 +1595,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
                     const headerInput = card.querySelector('[data-pi-header-input]');
                     const referenceDateInput = card.querySelector('[data-bank-ref-date]');
-                    const telerangeInput = card.querySelector('[data-telerange-input]');
                     const originalText = actionButton.innerHTML;
 
                     actionButton.disabled = true;
@@ -1635,7 +1606,6 @@ document.addEventListener('DOMContentLoaded', () => {
                         formData.set('pi_token', piToken);
                         formData.set('pi_header', headerInput ? headerInput.value : '');
                         formData.set('reference_date', referenceDateInput ? referenceDateInput.value : '');
-                        formData.set('telerange_percentage', telerangeInput ? telerangeInput.value : '');
 
                         const response = await fetch('proforma_update.php', {
                             method: 'POST',
@@ -1668,8 +1638,6 @@ document.addEventListener('DOMContentLoaded', () => {
                                 state.proformas[index] = {
                                     ...current,
                                     pi_header: normalised.pi_header,
-                                    telerange_percentage: normalised.telerange_percentage,
-                                    telerange_percentage_formatted: normalised.telerange_percentage_formatted,
                                     reference: normalised.reference,
                                 };
                             }
@@ -1719,26 +1687,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
             });
 
-            piList.addEventListener('input', (event) => {
-                if (!event.target.matches('[data-telerange-input]')) {
-                    return;
-                }
-
-                const input = event.target;
-                const card = input.closest('.card[data-pi-token]');
-                const piTokenValue = card ? card.getAttribute('data-pi-token') : '';
-                const stateProforma = piTokenValue
-                    ? state.proformas.find((item) => item.token === piTokenValue)
-                    : null;
-
-                if (!stateProforma) {
-                    return;
-                }
-
-                const normalised = toCurrency(input.value || '0');
-                stateProforma.telerange_percentage = normalised;
-                stateProforma.telerange_percentage_formatted = normalised;
-            });
         }
 
         if (productModeInputs) {
