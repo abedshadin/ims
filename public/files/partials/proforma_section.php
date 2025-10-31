@@ -18,21 +18,14 @@
                 <label class="form-label text-uppercase small fw-semibold" for="pi_header">PI Header</label>
                 <input class="form-control" type="text" id="pi_header" name="pi_header" placeholder="e.g. Frozen Fries">
             </div>
-            <div class="col-lg-2">
+            <div class="col-lg-3">
                 <label class="form-label text-uppercase small fw-semibold" for="freight_amount">Freight Amount</label>
                 <div class="input-group">
                     <span class="input-group-text">$</span>
                     <input class="form-control" type="number" step="0.01" id="freight_amount" name="freight_amount" placeholder="0.00">
                 </div>
             </div>
-            <div class="col-lg-2">
-                <label class="form-label text-uppercase small fw-semibold" for="telerange_percentage">Telerange %</label>
-                <div class="input-group">
-                    <input class="form-control" type="number" step="0.01" min="0" id="telerange_percentage" name="telerange_percentage" placeholder="0.00">
-                    <span class="input-group-text">%</span>
-                </div>
-            </div>
-            <div class="col-lg-2 d-flex align-items-end">
+            <div class="col-lg-3 d-flex align-items-end">
                 <button class="btn btn-primary w-100" type="submit">Add Proforma Invoice</button>
             </div>
         </form>
@@ -99,7 +92,6 @@
         $referenceCode = (string) ($reference['code'] ?? '');
         $referenceDate = (string) ($reference['date'] ?? '');
         $referenceDateFormatted = $referenceDate !== '' ? date('j M Y', strtotime($referenceDate)) : null;
-        $telerangePercentage = isset($proforma['telerange_percentage']) ? (string) $proforma['telerange_percentage'] : '0.00';
         ?>
         <div class="col-12">
             <div class="workspace-section-card card shadow-sm border-0" data-pi-token="<?php echo e($piToken); ?>">
@@ -139,7 +131,7 @@
                     <div class="card bg-light border-0 mt-3">
                         <div class="card-body py-3">
                             <div class="row g-3 align-items-end">
-                                <div class="col-lg-3">
+                                <div class="col-lg-4">
                                     <label class="form-label text-uppercase small fw-semibold" for="pi_header_<?php echo e($piToken); ?>">PI Header</label>
                                     <input class="form-control form-control-sm" type="text" id="pi_header_<?php echo e($piToken); ?>" value="<?php echo e($piHeaderValue); ?>" data-pi-header-input>
                                 </div>
@@ -154,14 +146,7 @@
                                         <div class="text-muted small mt-1">Saved as <?php echo e($referenceDateFormatted); ?></div>
                                     <?php endif; ?>
                                 </div>
-                                <div class="col-lg-2">
-                                    <label class="form-label text-uppercase small fw-semibold" for="telerange_value_<?php echo e($piToken); ?>">Telerange %</label>
-                                    <div class="input-group input-group-sm">
-                                        <input class="form-control" type="number" step="0.01" min="0" id="telerange_value_<?php echo e($piToken); ?>" value="<?php echo e($telerangePercentage); ?>" data-telerange-input>
-                                        <span class="input-group-text">%</span>
-                                    </div>
-                                </div>
-                                <div class="col-lg-1 d-flex align-items-end">
+                                <div class="col-lg-2 d-flex align-items-end">
                                     <button class="btn btn-outline-secondary w-100" type="button" data-action="save-pi-details" data-pi-token="<?php echo e($piToken); ?>">Save</button>
                                 </div>
                             </div>

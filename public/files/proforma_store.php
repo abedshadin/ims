@@ -32,7 +32,6 @@ $fileToken = trim($_POST['file_token'] ?? '');
 $invoiceNumber = trim($_POST['invoice_number'] ?? '');
 $piHeader = trim($_POST['pi_header'] ?? '');
 $freightAmountRaw = trim($_POST['freight_amount'] ?? '');
-$telerangePercentageRaw = trim($_POST['telerange_percentage'] ?? '');
 
 if ($fileToken === '' || ($fileId = IdCipher::decode($fileToken)) === null) {
     http_response_code(422);
@@ -55,7 +54,6 @@ if ($invoiceNumber === '') {
 $piHeader = mb_substr($piHeader, 0, 255);
 
 $freightAmount = 0.0;
-$telerangePercentage = 0.0;
 
 if ($freightAmountRaw !== '') {
     if (!is_numeric($freightAmountRaw)) {
@@ -74,28 +72,6 @@ if ($freightAmountRaw !== '') {
         echo json_encode([
             'status' => 'error',
             'message' => 'Freight cannot be negative.',
-        ]);
-        exit;
-    }
-}
-
-if ($telerangePercentageRaw !== '') {
-    if (!is_numeric($telerangePercentageRaw)) {
-        http_response_code(422);
-        echo json_encode([
-            'status' => 'error',
-            'message' => 'Provide the telerange percentage as a numeric value.',
-        ]);
-        exit;
-    }
-
-    $telerangePercentage = (float) $telerangePercentageRaw;
-
-    if ($telerangePercentage < 0 || $telerangePercentage > 1000) {
-        http_response_code(422);
-        echo json_encode([
-            'status' => 'error',
-            'message' => 'The telerange percentage must be between 0 and 1000.',
         ]);
         exit;
     }
@@ -125,15 +101,13 @@ try {
     $pdo->beginTransaction();
 
     $insertStatement = $pdo->prepare(
-        'INSERT INTO proforma_invoices (vendor_file_id, invoice_number, pi_header, lc_tolerance_enabled, lc_tolerance_percentage, freight_amount, created_at, created_by) '
-        . 'VALUES (:vendor_file_id, :invoice_number, :pi_header, :lc_tolerance_enabled, :lc_tolerance_percentage, :freight_amount, NOW(), :created_by)'
+        'INSERT INTO proforma_invoices (vendor_file_id, invoice_number, pi_header, freight_amount, created_at, created_by) '
+        . 'VALUES (:vendor_file_id, :invoice_number, :pi_header, :freight_amount, NOW(), :created_by)'
     );
     $insertStatement->execute([
         ':vendor_file_id' => $fileId,
         ':invoice_number' => $invoiceNumber,
         ':pi_header' => $piHeader,
-        ':lc_tolerance_enabled' => 0,
-        ':lc_tolerance_percentage' => $telerangePercentage,
         ':freight_amount' => $freightAmount,
         ':created_by' => Auth::userId(),
     ]);
@@ -174,8 +148,6 @@ try {
             'token' => $piToken,
             'invoice_number' => $invoiceNumber,
             'pi_header' => $piHeader,
-            'telerange_percentage' => number_format($telerangePercentage, 2, '.', ''),
-            'telerange_percentage_formatted' => number_format($telerangePercentage, 2),
             'freight_amount' => number_format($freightAmount, 2, '.', ''),
             'created_at' => $createdAt,
             'created_at_human' => date('j M Y, g:i A', strtotime($createdAt)),
