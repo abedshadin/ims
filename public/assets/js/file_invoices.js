@@ -708,6 +708,11 @@ document.addEventListener('DOMContentLoaded', () => {
             ? `Please arrange to through L/C to <strong>${escapeHtml(advisingBankName)}, SWIFT CODE: ${escapeHtml(advisingSwift || 'N/A')}, A/C NO. ${escapeHtml(advisingAccount || 'N/A')}</strong>; For Payment to <strong>${escapeHtml(beneficiaryBank || 'Beneficiary Bank')}, SWIFT CODE: ${escapeHtml(beneficiarySwift || 'N/A')}, ${escapeHtml(file.vendor_name || 'VENDOR NAME')}, A/C NO. ${escapeHtml(beneficiaryAccount || 'N/A')}</strong>.`
             : `Please open irrevocable L/C through <strong>${escapeHtml(beneficiaryBank || 'Beneficiary Bank')}, SWIFT Code: ${escapeHtml(beneficiarySwift || 'N/A')}.</strong>`;
 
+        const toleranceValue = parseNumber(proforma.tolerance_percentage ?? proforma.tolerance_percentage_formatted ?? 0);
+        const toleranceLine = toleranceValue > 0
+            ? `<li>This is a tolerance limit of ${escapeHtml(formatToleranceValue(toleranceValue))}%.</li>`
+            : '';
+
         return `
             <div class="letter-page d-flex flex-column">
                 <header class="letter-header mb-3"><img src="header.jpg" alt="Header"></header>
@@ -736,6 +741,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         <li>Importer’s Name: Transcom Foods Limited, Address: SE (F) 5, Gulshan Avenue, Gulshan, Dhaka-1212, Bangladesh and E-TIN No. 892580838781, must be clearly mentioned / printed in the packets/cartons.</li>
                         <li>E-TIN No. 892580838781, BIN No. 000002132-0101 must appear in the invoice and packing list.</li>
                         <li>The beneficiary must send the shipment advice to Reliance Insurance Ltd. at their E-mail ID: <a href="mailto:info@reliance.com.bd">info@reliance.com.bd</a>.</li>
+                        ${toleranceLine}
                     </ol>
                     <div class="sig-row mt-auto">
                         <div class="sig text-start">Authorized Signature</div>
