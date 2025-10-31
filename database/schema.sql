@@ -72,6 +72,7 @@ CREATE TABLE IF NOT EXISTS proforma_invoices (
     invoice_number VARCHAR(100) NOT NULL,
     pi_header VARCHAR(255) NOT NULL DEFAULT '',
     freight_amount DECIMAL(15, 2) NOT NULL DEFAULT 0.00,
+    tolerance_percentage DECIMAL(5, 2) NOT NULL DEFAULT 0.00,
     created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
     created_by BIGINT UNSIGNED NULL,
     CONSTRAINT fk_proforma_invoices_file FOREIGN KEY (vendor_file_id) REFERENCES vendor_files(id) ON DELETE CASCADE
