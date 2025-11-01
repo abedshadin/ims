@@ -62,7 +62,6 @@
 
         $freightAmount = $parseNumeric($proforma['freight_amount'] ?? 0);
         $totalWeight = 0.0;
-        $totalFob = 0.0;
         $lines = [];
         $tolerancePercentage = (float) ($proforma['tolerance_percentage'] ?? 0);
         $tolerancePercentageDisplay = number_format($tolerancePercentage, 2);
@@ -71,17 +70,15 @@
             $quantity = $parseNumeric($product['quantity'] ?? 0);
             $fobTotal = $parseNumeric($product['fob_total'] ?? 0);
             $itemWeight = $parseNumeric($product['item_weight'] ?? 0);
-            $lineWeight = $itemWeight * $quantity;
+            $productWeight = $itemWeight;
 
-            $totalWeight += $lineWeight;
-            $totalFob += $fobTotal;
-
+            $totalWeight += $productWeight;
             $lines[] = [
                 'product' => $product,
                 'quantity' => $quantity,
                 'fob_total' => $fobTotal,
                 'item_weight' => $itemWeight,
-                'line_weight' => $lineWeight,
+                'product_weight' => $productWeight,
             ];
         }
 
@@ -90,41 +87,37 @@
         $totalWeightExpressionDisplay = $totalWeight > 0
             ? (rtrim(rtrim(number_format($totalWeight, 3, '.', ''), '0'), '.') ?: '0')
             : '0';
-        $totalCnf = 0.0;
-
         foreach ($lines as $index => $line) {
             $quantity = $line['quantity'];
             $fobTotal = $line['fob_total'];
             $itemWeight = $line['item_weight'];
-            $lineWeight = $line['line_weight'];
+            $productWeight = $line['product_weight'];
 
             $fobPerUnit = $quantity > 0 ? $fobTotal / $quantity : 0.0;
-            $hasItemWeight = $itemWeight > 0;
+            $hasProductWeight = $productWeight > 0;
             $hasTotalWeight = $totalWeight > 0;
-            $fobPerWeight = $hasItemWeight ? ($fobTotal / $itemWeight) : 0.0;
+            $fobPerWeight = $hasProductWeight ? ($fobTotal / $productWeight) : 0.0;
 
-            if ($hasItemWeight && $hasTotalWeight) {
+            if ($hasProductWeight && $hasTotalWeight) {
                 $cnfPerWeight = $freightPerWeight + $fobPerWeight;
-                $cnfPerUnit = $cnfPerWeight * $itemWeight;
-                $cnfTotal = $cnfPerUnit * $quantity;
+                $cnfTotal = $cnfPerWeight * $productWeight;
+                $cnfPerUnit = $quantity > 0 ? $cnfTotal / $quantity : 0.0;
             } else {
                 $cnfPerWeight = 0.0;
                 $cnfPerUnit = $fobPerUnit;
                 $cnfTotal = $fobTotal;
             }
 
-            $totalCnf += $cnfTotal;
-
-            $itemWeightDisplay = $hasItemWeight
-                ? (rtrim(rtrim(number_format($itemWeight, 3, '.', ''), '0'), '.') ?: '0')
+            $productWeightDisplay = $hasProductWeight
+                ? (rtrim(rtrim(number_format($productWeight, 3, '.', ''), '0'), '.') ?: '0')
                 : '0';
             $freightComponentDisplay = number_format($freightPerWeight, 4);
             $fobComponentDisplay = number_format($fobPerWeight, 4);
             $cnfPerWeightDisplay = number_format($cnfPerWeight, 4);
-            $calcExpression = ($hasItemWeight && $hasTotalWeight)
-                ? sprintf('($%s ÷ %s) + ($%s ÷ %s) = $%s per weight', $freightAmountDisplay, $totalWeightExpressionDisplay, number_format($fobTotal, 2), $itemWeightDisplay, $cnfPerWeightDisplay)
+            $calcExpression = ($hasProductWeight && $hasTotalWeight)
+                ? sprintf('($%s ÷ %s) + ($%s ÷ %s) = $%s per weight', $freightAmountDisplay, $totalWeightExpressionDisplay, number_format($fobTotal, 2), $productWeightDisplay, $cnfPerWeightDisplay)
                 : 'Calculation unavailable (missing weight)';
-            $calcComponents = ($hasItemWeight && $hasTotalWeight)
+            $calcComponents = ($hasProductWeight && $hasTotalWeight)
                 ? sprintf('Freight/Weight $%s + FOB/Weight $%s = $%s per weight', $freightComponentDisplay, $fobComponentDisplay, $cnfPerWeightDisplay)
                 : 'Freight or weight data missing for this product';
 
@@ -266,7 +259,7 @@
                                 $cnfPerUnitDisplay = number_format($line['cnf_per_unit'] ?? 0, 2);
                                 $cnfPerWeightDisplay = number_format($line['cnf_per_weight'] ?? 0, 4);
                                 $cnfTotalDisplay = number_format($line['cnf_total'] ?? 0, 2);
-                                $lineWeightDisplay = rtrim(rtrim(number_format($line['line_weight'], 3, '.', ''), '0'), '.') ?: '0';
+                                $productWeightDisplay = rtrim(rtrim(number_format($line['product_weight'], 3, '.', ''), '0'), '.') ?: '0';
                                 $cnfCalcExpression = (string) ($line['cnf_calc_expression'] ?? '');
                                 $cnfCalcComponents = (string) ($line['cnf_calc_components'] ?? '');
                                 ?>
@@ -286,7 +279,7 @@
                                         <div><?php echo e($product['product_size'] ?? ''); ?></div>
                                         <div class="text-muted small">Unit: <?php echo e($product['unit'] ?? ''); ?></div>
                                         <div class="text-muted small">Unit Wt: <?php echo e($product['item_weight'] ?? ''); ?></div>
-                                        <div class="text-muted small">Total Wt: <?php echo e($lineWeightDisplay); ?></div>
+                                        <div class="text-muted small">Total Wt: <?php echo e($productWeightDisplay); ?></div>
                                     </td>
                                     <td class="text-end">
                                         <div class="fw-semibold">$<?php echo e($product['rate_formatted'] ?? number_format((float) ($product['rate'] ?? 0), 2)); ?></div>
