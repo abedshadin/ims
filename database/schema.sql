@@ -112,6 +112,47 @@ CREATE TABLE IF NOT EXISTS proforma_invoice_products (
     CONSTRAINT fk_invoice_products_vendor_product FOREIGN KEY (vendor_product_id) REFERENCES vendor_products(id) ON DELETE SET NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
+CREATE TABLE IF NOT EXISTS commercial_invoices (
+    id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    vendor_file_id BIGINT UNSIGNED NOT NULL,
+    proforma_invoice_id BIGINT UNSIGNED NOT NULL,
+    invoice_number VARCHAR(100) NOT NULL,
+    invoice_date DATE NOT NULL,
+    total_value DECIMAL(15, 2) NOT NULL DEFAULT 0.00,
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP NULL DEFAULT NULL ON UPDATE CURRENT_TIMESTAMP,
+    created_by BIGINT UNSIGNED NULL,
+    updated_by BIGINT UNSIGNED NULL,
+    CONSTRAINT fk_commercial_invoices_file FOREIGN KEY (vendor_file_id) REFERENCES vendor_files(id) ON DELETE CASCADE,
+    CONSTRAINT fk_commercial_invoices_proforma FOREIGN KEY (proforma_invoice_id) REFERENCES proforma_invoices(id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS commercial_invoice_products (
+    id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    commercial_invoice_id BIGINT UNSIGNED NOT NULL,
+    proforma_invoice_product_id BIGINT UNSIGNED NOT NULL,
+    product_name VARCHAR(255) NOT NULL,
+    brand VARCHAR(50) NOT NULL,
+    country_of_origin VARCHAR(100) NOT NULL,
+    product_category VARCHAR(50) NOT NULL,
+    product_size VARCHAR(100) NOT NULL,
+    unit VARCHAR(50) NOT NULL,
+    hs_code VARCHAR(100) NOT NULL,
+    final_quantity DECIMAL(15, 3) NOT NULL DEFAULT 0.000,
+    final_unit_price DECIMAL(15, 2) NOT NULL DEFAULT 0.00,
+    total_item_price DECIMAL(15, 2) NOT NULL DEFAULT 0.00,
+    unit_freight DECIMAL(15, 4) NOT NULL DEFAULT 0.0000,
+    total_freight DECIMAL(15, 2) NOT NULL DEFAULT 0.00,
+    item_weight DECIMAL(15, 3) NOT NULL DEFAULT 0.000,
+    total_weight DECIMAL(15, 3) NOT NULL DEFAULT 0.000,
+    total_cnf_value DECIMAL(15, 2) NOT NULL DEFAULT 0.00,
+    invoice_total DECIMAL(15, 2) NOT NULL DEFAULT 0.00,
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP NULL DEFAULT NULL ON UPDATE CURRENT_TIMESTAMP,
+    CONSTRAINT fk_ci_products_invoice FOREIGN KEY (commercial_invoice_id) REFERENCES commercial_invoices(id) ON DELETE CASCADE,
+    CONSTRAINT fk_ci_products_proforma FOREIGN KEY (proforma_invoice_product_id) REFERENCES proforma_invoice_products(id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
 CREATE TABLE IF NOT EXISTS file_letters_of_credit (
     id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
     vendor_file_id BIGINT UNSIGNED NOT NULL,

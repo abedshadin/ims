@@ -60,9 +60,104 @@ document.addEventListener('DOMContentLoaded', () => {
         };
     };
 
+    const normaliseCommercialProduct = (product) => {
+        if (!product || typeof product !== 'object') {
+            return null;
+        }
+
+        const quantityValue = product.final_quantity ?? product.final_quantity_formatted ?? '0';
+        const unitPriceValue = product.final_unit_price ?? product.final_unit_price_formatted ?? '0';
+        const totalItemValue = product.total_item_price ?? product.total_item_price_formatted ?? '0';
+        const unitFreightValue = product.unit_freight ?? product.unit_freight_formatted ?? '0';
+        const totalFreightValue = product.total_freight ?? product.total_freight_formatted ?? '0';
+        const itemWeightValue = product.item_weight ?? product.item_weight_formatted ?? '0';
+        const totalWeightValue = product.total_weight ?? product.total_weight_formatted ?? '0';
+        const totalCnfValue = product.total_cnf_value ?? product.total_cnf_value_formatted ?? '0';
+        const invoiceTotalValue = product.invoice_total ?? product.invoice_total_formatted ?? '0';
+
+        const finalQuantity = formatQuantity(quantityValue);
+        const finalUnitPrice = toCurrency(unitPriceValue);
+        const totalItemPrice = toCurrency(totalItemValue);
+        const unitFreight = formatFreight(unitFreightValue);
+        const totalFreight = toCurrency(totalFreightValue);
+        const itemWeight = formatWeight(itemWeightValue);
+        const totalWeight = formatWeight(totalWeightValue);
+        const totalCnf = toCurrency(totalCnfValue);
+        const invoiceTotal = toCurrency(invoiceTotalValue);
+
+        return {
+            ...product,
+            token: product.token || '',
+            proforma_product_token: product.proforma_product_token || '',
+            product_name: product.product_name || '',
+            brand: product.brand || '',
+            country_of_origin: product.country_of_origin || '',
+            product_category: product.product_category || '',
+            product_size: product.product_size || '',
+            unit: product.unit || '',
+            hs_code: product.hs_code || '',
+            final_quantity: finalQuantity,
+            final_quantity_formatted: finalQuantity,
+            final_unit_price: finalUnitPrice,
+            final_unit_price_formatted: finalUnitPrice,
+            total_item_price: totalItemPrice,
+            total_item_price_formatted: totalItemPrice,
+            unit_freight: unitFreight,
+            unit_freight_formatted: unitFreight,
+            total_freight: totalFreight,
+            total_freight_formatted: totalFreight,
+            item_weight: itemWeight,
+            item_weight_formatted: itemWeight,
+            total_weight: totalWeight,
+            total_weight_formatted: totalWeight,
+            total_cnf_value: totalCnf,
+            total_cnf_value_formatted: totalCnf,
+            invoice_total: invoiceTotal,
+            invoice_total_formatted: invoiceTotal,
+        };
+    };
+
+    const normaliseCommercialInvoice = (invoice) => {
+        if (!invoice || typeof invoice !== 'object') {
+            return null;
+        }
+
+        const products = Array.isArray(invoice.products)
+            ? invoice.products.map(normaliseCommercialProduct).filter((item) => item && item.token)
+            : [];
+
+        const invoiceDate = invoice.invoice_date || '';
+        const invoiceDateFormatted = invoice.invoice_date_formatted
+            || (invoiceDate ? formatDate(invoiceDate, { day: '2-digit', month: 'short', year: 'numeric' }) : '');
+        const totalValue = invoice.total_value ?? invoice.total_value_formatted ?? '0';
+        const totalValueFormatted = toCurrency(totalValue);
+
+        const proforma = invoice.proforma && typeof invoice.proforma === 'object'
+            ? {
+                token: invoice.proforma.token || '',
+                invoice_number: invoice.proforma.invoice_number || '',
+            }
+            : { token: '', invoice_number: '' };
+
+        return {
+            ...invoice,
+            token: invoice.token || '',
+            proforma,
+            invoice_number: invoice.invoice_number || '',
+            invoice_date: invoiceDate,
+            invoice_date_formatted: invoiceDateFormatted,
+            total_value: totalValueFormatted,
+            total_value_formatted: totalValueFormatted,
+            products,
+        };
+    };
+
     const state = parseJson(dataElement);
     state.proformas = Array.isArray(state.proformas)
         ? state.proformas.map(normaliseProforma).filter((item) => item)
+        : [];
+    state.commercialInvoices = Array.isArray(state.commercialInvoices)
+        ? state.commercialInvoices.map(normaliseCommercialInvoice).filter((item) => item)
         : [];
     state.vendorProducts = Array.isArray(state.vendorProducts) ? state.vendorProducts : [];
     state.file = state.file && typeof state.file === 'object' ? state.file : null;
@@ -76,6 +171,10 @@ document.addEventListener('DOMContentLoaded', () => {
     const noPiMessage = document.getElementById('noPiMessage');
     const createPiForm = document.getElementById('createPiForm');
     const piAlert = document.getElementById('piAlert');
+    const ciList = document.getElementById('ciList');
+    const noCiMessage = document.getElementById('noCiMessage');
+    const createCiForm = document.getElementById('createCiForm');
+    const ciAlert = document.getElementById('ciAlert');
     const productModalElement = document.getElementById('productModal');
     const productForm = document.getElementById('productForm');
     const productFormSubmit = document.getElementById('productFormSubmit');
@@ -208,6 +307,16 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         return number.toFixed(3).replace(/\.0+$/, '').replace(/\.([0-9]*[1-9])0+$/, '.$1');
+    };
+
+    const formatFreight = (value) => {
+        const number = parseNumber(value);
+
+        if (!Number.isFinite(number) || number === 0) {
+            return '0.0000';
+        }
+
+        return number.toFixed(4);
     };
 
     const formatPercent = (value) => {
@@ -1144,6 +1253,183 @@ document.addEventListener('DOMContentLoaded', () => {
         return row;
     };
 
+    const renderCommercialCard = (invoice) => {
+        const wrapper = document.createElement('div');
+        wrapper.className = 'col-12';
+
+        const card = document.createElement('div');
+        card.className = 'workspace-section-card card shadow-sm border-0';
+        card.dataset.ciToken = invoice.token || '';
+
+        const invoiceNumber = invoice.invoice_number || '';
+        const invoiceDateDisplay = invoice.invoice_date_formatted
+            || (invoice.invoice_date ? formatDate(invoice.invoice_date, { day: '2-digit', month: 'short', year: 'numeric' }) : '');
+        const totalValueDisplay = toCurrency(invoice.total_value || invoice.total_value_formatted || 0);
+        const createdAt = invoice.created_at_human || '';
+        const proformaNumber = invoice.proforma && invoice.proforma.invoice_number
+            ? `PI ${invoice.proforma.invoice_number}`
+            : '';
+        const productRows = (invoice.products || [])
+            .filter((product) => product && product.token)
+            .map((product) => {
+                const productName = product.product_name || 'Unnamed Product';
+                const brand = product.brand ? `<div class="text-muted small">${escapeHtml(product.brand)}</div>` : '';
+                const category = product.product_category ? `<div class="text-muted small">${escapeHtml(product.product_category)}</div>` : '';
+                const country = product.country_of_origin ? `<div class="text-muted small">Origin: ${escapeHtml(product.country_of_origin)}</div>` : '';
+                const size = product.product_size ? `<div class="text-muted small">Size: ${escapeHtml(product.product_size)}</div>` : '';
+                const unit = product.unit ? `<div class="text-muted small">Unit: ${escapeHtml(product.unit)}</div>` : '';
+                const hsCode = product.hs_code ? `<div class="text-muted small">HS: ${escapeHtml(product.hs_code)}</div>` : '';
+
+                return `
+                    <tr data-product-token="${escapeHtml(product.token)}">
+                        <td>
+                            <div class="fw-semibold">${escapeHtml(productName)}</div>
+                            ${brand}
+                        </td>
+                        <td>
+                            ${category}
+                            ${country}
+                            ${size}
+                            ${unit}
+                            ${hsCode}
+                        </td>
+                        <td class="text-end">
+                            <input class="form-control form-control-sm text-end" type="number" step="0.001" min="0" name="products[${escapeHtml(product.token)}][final_quantity]" value="${escapeHtml(product.final_quantity || '0')}" required>
+                        </td>
+                        <td class="text-end">
+                            <input class="form-control form-control-sm text-end" type="number" step="0.01" min="0" name="products[${escapeHtml(product.token)}][final_unit_price]" value="${escapeHtml(product.final_unit_price || '0.00')}" required>
+                        </td>
+                        <td class="text-end">
+                            <input class="form-control form-control-sm text-end" type="number" step="0.01" min="0" name="products[${escapeHtml(product.token)}][total_item_price]" value="${escapeHtml(product.total_item_price || '0.00')}" required>
+                        </td>
+                        <td class="text-end">
+                            <input class="form-control form-control-sm text-end" type="number" step="0.0001" min="0" name="products[${escapeHtml(product.token)}][unit_freight]" value="${escapeHtml(product.unit_freight || '0.0000')}" required>
+                        </td>
+                        <td class="text-end">
+                            <input class="form-control form-control-sm text-end" type="number" step="0.01" min="0" name="products[${escapeHtml(product.token)}][total_freight]" value="${escapeHtml(product.total_freight || '0.00')}" required>
+                        </td>
+                        <td class="text-end">
+                            <input class="form-control form-control-sm text-end" type="number" step="0.001" min="0" name="products[${escapeHtml(product.token)}][item_weight]" value="${escapeHtml(product.item_weight || '0')}" required>
+                        </td>
+                        <td class="text-end">
+                            <input class="form-control form-control-sm text-end" type="number" step="0.001" min="0" name="products[${escapeHtml(product.token)}][total_weight]" value="${escapeHtml(product.total_weight || '0')}" required>
+                        </td>
+                        <td class="text-end">
+                            <input class="form-control form-control-sm text-end" type="number" step="0.01" min="0" name="products[${escapeHtml(product.token)}][total_cnf_value]" value="${escapeHtml(product.total_cnf_value || '0.00')}" required>
+                        </td>
+                        <td class="text-end">
+                            <input class="form-control form-control-sm text-end" type="number" step="0.01" min="0" name="products[${escapeHtml(product.token)}][invoice_total]" value="${escapeHtml(product.invoice_total || '0.00')}" required>
+                        </td>
+                    </tr>
+                `;
+            })
+            .join('');
+
+        const tableBody = productRows || '<tr><td class="text-center text-muted py-4" colspan="11">No products available for this commercial invoice.</td></tr>';
+
+        card.innerHTML = `
+            <div class="card-header bg-white border-0 pb-0">
+                <div class="d-flex flex-column flex-xl-row justify-content-between align-items-start align-items-xl-center gap-4">
+                    <div class="flex-grow-1">
+                        <div class="d-flex flex-wrap align-items-center gap-2 mb-1">
+                            <span class="badge rounded-pill text-bg-success-subtle text-success fw-semibold">CI</span>
+                            <h2 class="h5 mb-0">Commercial ${escapeHtml(invoiceNumber)}</h2>
+                            <span class="badge text-bg-light text-primary-emphasis">Total $${escapeHtml(totalValueDisplay)}</span>
+                            ${proformaNumber ? `<span class="badge text-bg-secondary-subtle text-secondary">Based on ${escapeHtml(proformaNumber)}</span>` : ''}
+                            ${invoiceDateDisplay ? `<span class="badge text-bg-info-subtle text-info">Dated ${escapeHtml(invoiceDateDisplay)}</span>` : ''}
+                        </div>
+                        <p class="text-muted small mb-0">Created ${escapeHtml(createdAt)}</p>
+                    </div>
+                </div>
+            </div>
+            <div class="card-body pt-4" data-ci-container>
+                <div class="alert d-none" data-ci-message role="alert"></div>
+                <form class="ci-form" data-ci-form data-ci-token="${escapeHtml(invoice.token || '')}" novalidate>
+                    <div class="row g-3 align-items-end">
+                        <div class="col-lg-4">
+                            <label class="form-label text-uppercase small fw-semibold">Commercial Invoice Number</label>
+                            <input class="form-control form-control-sm" type="text" name="invoice_number" value="${escapeHtml(invoiceNumber)}" required>
+                        </div>
+                        <div class="col-lg-3">
+                            <label class="form-label text-uppercase small fw-semibold">Invoice Date</label>
+                            <input class="form-control form-control-sm" type="date" name="invoice_date" value="${escapeHtml(invoice.invoice_date || '')}" required>
+                        </div>
+                        <div class="col-lg-3">
+                            <label class="form-label text-uppercase small fw-semibold">Base Proforma</label>
+                            <input class="form-control form-control-sm" type="text" value="${escapeHtml(proformaNumber || 'Not linked')}" readonly>
+                        </div>
+                        <div class="col-lg-2 d-flex align-items-end">
+                            <button class="btn btn-outline-secondary w-100" type="submit" data-ci-submit>Save Changes</button>
+                        </div>
+                    </div>
+
+                    <div class="workspace-stat-grid mt-3">
+                        <div class="workspace-stat">
+                            <span class="workspace-stat-label">Products</span>
+                            <span class="workspace-stat-value">${invoice.products ? invoice.products.length : 0}</span>
+                        </div>
+                        <div class="workspace-stat">
+                            <span class="workspace-stat-label">Invoice Date</span>
+                            <span class="workspace-stat-value">${escapeHtml(invoiceDateDisplay || 'Not set')}</span>
+                        </div>
+                        <div class="workspace-stat">
+                            <span class="workspace-stat-label">Total Invoice Value</span>
+                            <span class="workspace-stat-value">$${escapeHtml(totalValueDisplay)}</span>
+                        </div>
+                    </div>
+
+                    <div class="table-responsive mt-4">
+                        <table class="table table-sm table-hover align-middle mb-0 workspace-product-table">
+                            <thead class="table-light">
+                                <tr>
+                                    <th scope="col">Product</th>
+                                    <th scope="col">Category &amp; Details</th>
+                                    <th scope="col" class="text-end">Final Qty</th>
+                                    <th scope="col" class="text-end">Final Unit Price</th>
+                                    <th scope="col" class="text-end">Total Item Price</th>
+                                    <th scope="col" class="text-end">Unit Freight</th>
+                                    <th scope="col" class="text-end">Total Freight</th>
+                                    <th scope="col" class="text-end">Item Weight</th>
+                                    <th scope="col" class="text-end">Total Weight</th>
+                                    <th scope="col" class="text-end">Total C&amp;F</th>
+                                    <th scope="col" class="text-end">Total Invoice Value</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                ${tableBody}
+                            </tbody>
+                        </table>
+                    </div>
+                </form>
+            </div>
+        `;
+
+        wrapper.append(card);
+
+        return wrapper;
+    };
+
+    const refreshCiList = () => {
+        if (!ciList) {
+            return;
+        }
+
+        ciList.innerHTML = '';
+
+        state.commercialInvoices.forEach((invoice) => {
+            const cardWrapper = renderCommercialCard(invoice);
+            ciList.append(cardWrapper);
+        });
+
+        if (noCiMessage) {
+            if (state.commercialInvoices.length === 0) {
+                noCiMessage.classList.remove('d-none');
+            } else {
+                noCiMessage.classList.add('d-none');
+            }
+        }
+    };
+
     const calculateProformaMetrics = (proforma) => {
         const products = Array.isArray(proforma.products) ? proforma.products : [];
         const lines = [];
@@ -1634,6 +1920,64 @@ document.addEventListener('DOMContentLoaded', () => {
             });
         }
 
+        if (createCiForm) {
+            createCiForm.addEventListener('submit', async (event) => {
+                event.preventDefault();
+                resetAlert(ciAlert);
+
+                const submitButton = createCiForm.querySelector('button[type="submit"]');
+                if (submitButton) {
+                    submitButton.disabled = true;
+                }
+
+                try {
+                    const formData = new FormData(createCiForm);
+                    const response = await fetch('commercial_store.php', {
+                        method: 'POST',
+                        body: formData,
+                    });
+
+                    if (response.status === 401) {
+                        window.location.reload();
+                        return;
+                    }
+
+                    let result;
+
+                    try {
+                        result = await response.json();
+                    } catch (error) {
+                        throw new Error('Unexpected response received.');
+                    }
+
+                    if (!response.ok || result.status !== 'success') {
+                        throw new Error(result.message || 'Unable to create the commercial invoice.');
+                    }
+
+                    if (result.invoice) {
+                        const normalised = normaliseCommercialInvoice(result.invoice);
+                        if (normalised) {
+                            state.commercialInvoices.unshift(normalised);
+                        }
+                        refreshCiList();
+                        createCiForm.reset();
+                    }
+
+                    if (result.file_meta) {
+                        updateFileMeta(result.file_meta);
+                    }
+
+                    showAlert(ciAlert, result.message || 'Commercial invoice created.', 'success');
+                } catch (error) {
+                    showAlert(ciAlert, error.message, 'danger');
+                } finally {
+                    if (submitButton) {
+                        submitButton.disabled = false;
+                    }
+                }
+            });
+        }
+
         if (createPiForm) {
             createPiForm.addEventListener('submit', async (event) => {
                 event.preventDefault();
@@ -1684,6 +2028,92 @@ document.addEventListener('DOMContentLoaded', () => {
                     showAlert(piAlert, result.message || 'Proforma invoice added.', 'success');
                 } catch (error) {
                     showAlert(piAlert, error.message, 'danger');
+                } finally {
+                    if (submitButton) {
+                        submitButton.disabled = false;
+                    }
+                }
+            });
+        }
+
+        if (ciList) {
+            ciList.addEventListener('submit', async (event) => {
+                const form = event.target.closest('form[data-ci-form]');
+
+                if (!form) {
+                    return;
+                }
+
+                event.preventDefault();
+
+                const ciToken = form.getAttribute('data-ci-token') || '';
+
+                if (!ciToken) {
+                    showAlert(ciAlert, 'Unable to determine the selected commercial invoice.', 'danger');
+                    return;
+                }
+
+                const messageBox = form.querySelector('[data-ci-message]');
+                resetAlert(messageBox);
+
+                const submitButton = form.querySelector('[data-ci-submit]');
+                if (submitButton) {
+                    submitButton.disabled = true;
+                }
+
+                try {
+                    const formData = new FormData(form);
+                    formData.append('ci_token', ciToken);
+
+                    const response = await fetch('commercial_update.php', {
+                        method: 'POST',
+                        body: formData,
+                    });
+
+                    if (response.status === 401) {
+                        window.location.reload();
+                        return;
+                    }
+
+                    let result;
+
+                    try {
+                        result = await response.json();
+                    } catch (error) {
+                        throw new Error('Unexpected response received.');
+                    }
+
+                    if (!response.ok || result.status !== 'success') {
+                        if (result.errors) {
+                            applyFormErrors(form, result.errors);
+                        }
+
+                        const targetAlert = messageBox || ciAlert;
+                        showAlert(targetAlert, result.message || 'Unable to update the commercial invoice.', 'danger');
+                        return;
+                    }
+
+                    if (result.invoice) {
+                        const updated = normaliseCommercialInvoice(result.invoice);
+                        if (updated) {
+                            const index = state.commercialInvoices.findIndex((item) => item.token === updated.token);
+                            if (index >= 0) {
+                                state.commercialInvoices[index] = updated;
+                            } else {
+                                state.commercialInvoices.unshift(updated);
+                            }
+                        }
+                        refreshCiList();
+                    }
+
+                    if (result.file_meta) {
+                        updateFileMeta(result.file_meta);
+                    }
+
+                    showAlert(ciAlert, result.message || 'Commercial invoice updated.', 'success');
+                } catch (error) {
+                    const targetAlert = messageBox || ciAlert;
+                    showAlert(targetAlert, error.message, 'danger');
                 } finally {
                     if (submitButton) {
                         submitButton.disabled = false;
@@ -2051,6 +2481,7 @@ document.addEventListener('DOMContentLoaded', () => {
     syncLcForm(state.lc);
     updateInsuranceSummary(state.insurance);
     syncInsuranceForm(state.insurance);
+    refreshCiList();
     refreshPiList();
     attachEventListeners();
 });

@@ -10,6 +10,7 @@ require_once __DIR__ . '/../../app/FileLcDetails.php';
 require_once __DIR__ . '/../../app/FileInsuranceDetails.php';
 require_once __DIR__ . '/../../app/BankDirectory.php';
 require_once __DIR__ . '/../../app/ProformaReference.php';
+require_once __DIR__ . '/../../app/CommercialInvoice.php';
 
 Auth::requireLogin('/auth/login.php');
 
@@ -25,6 +26,7 @@ $loadError = null;
 $file = null;
 $vendorProducts = [];
 $proformas = [];
+$commercialInvoices = [];
 $lcDetails = null;
 $insuranceDetails = null;
 $bankProfile = null;
@@ -166,6 +168,7 @@ if ($fileId === null) {
                 ];
             }
 
+            $commercialInvoices = CommercialInvoice::loadForFile($pdo, $fileId);
             $lcDetails = FileLcDetails::load($pdo, $fileId);
             $insuranceDetails = FileInsuranceDetails::load($pdo, $fileId);
         }
@@ -223,6 +226,7 @@ $initialData = [
         }
     }, $vendorProducts))),
     'proformas' => $proformas,
+    'commercialInvoices' => $commercialInvoices,
     'lc' => $lcDetails,
     'insurance' => $insuranceDetails,
     'bank' => $bankProfile,
@@ -302,6 +306,18 @@ if ($file !== null) {
                 <div id="proformaCollapse" class="accordion-collapse collapse show" data-bs-parent="#fileWorkspaceAccordion">
                     <div class="accordion-body">
                         <?php include __DIR__ . '/partials/proforma_section.php'; ?>
+                    </div>
+                </div>
+            </div>
+            <div class="accordion-item">
+                <h2 class="accordion-header" id="commercialHeading">
+                    <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#commercialCollapse" aria-expanded="false" aria-controls="commercialCollapse">
+                        Commercial Invoices
+                    </button>
+                </h2>
+                <div id="commercialCollapse" class="accordion-collapse collapse" data-bs-parent="#fileWorkspaceAccordion">
+                    <div class="accordion-body">
+                        <?php include __DIR__ . '/partials/commercial_section.php'; ?>
                     </div>
                 </div>
             </div>
