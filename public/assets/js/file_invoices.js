@@ -644,28 +644,26 @@ document.addEventListener('DOMContentLoaded', () => {
         const metrics = calculateProformaMetrics(proforma);
         const file = state.file || {};
         let totalAssesValue = 0;
-        let totalCnf = 0;
-        const totalWeight = metrics.totalWeight || 0;
 
         const rows = metrics.lines.map((line, index) => {
             const quantity = line.quantity;
             const assesUnit = parseNumber(line.product.asses_unit_price);
+            const productWeight = line.productWeight || 0;
             const assesValue = assesUnit * quantity;
-            const productWeight = parseNumber(line.productWeight);
-            const assesPerWeight = productWeight > 0 ? assesValue / productWeight : 0;
-            const cnfTotal = line.cnfTotal || 0;
-            const cnfPerUnit = line.cnfPerUnit || 0;
-            const percentChange = cnfPerUnit > 0 ? ((assesUnit - cnfPerUnit) / cnfPerUnit) * 100 : 0;
+            const cnfRate = line.cnfPerWeight || 0;
+            const assesPerWeight = productWeight > 0 && quantity > 0
+                ? (assesUnit * quantity) / productWeight
+                : 0;
+            const percentChange = cnfRate > 0 ? ((assesPerWeight - cnfRate) / cnfRate) * 100 : 0;
 
             totalAssesValue += assesValue;
-            totalCnf += cnfTotal;
 
             return `
                 <tr>
                     <td class="text-center">${index + 1}</td>
                     <td>${escapeHtml(line.product.product_name || '')}</td>
                     <td class="text-end">$${toCurrency(assesValue)}</td>
-                    <td class="text-end">$${toCurrency(cnfPerWeight)}</td>
+                    <td class="text-end">$${toCurrency(cnfRate)}</td>
                     <td class="text-end">${formatPercent(percentChange)}</td>
                 </tr>
             `;
@@ -675,10 +673,11 @@ document.addEventListener('DOMContentLoaded', () => {
             </tr>
         `;
 
-        const totalAssesPerUnit = totalQuantity > 0 ? totalAssesValue / totalQuantity : 0;
-        const totalCnfPerUnit = totalQuantity > 0 ? totalCnf / totalQuantity : 0;
-        const totalPercent = totalCnfPerUnit > 0
-            ? ((totalAssesPerUnit - totalCnfPerUnit) / totalCnfPerUnit) * 100
+        const totalWeight = metrics.totalWeight || 0;
+        const totalAssesPerWeight = totalWeight > 0 ? totalAssesValue / totalWeight : 0;
+        const totalCnfRate = totalWeight > 0 ? metrics.totalCnf / totalWeight : 0;
+        const totalPercent = totalCnfRate > 0
+            ? ((totalAssesPerWeight - totalCnfRate) / totalCnfRate) * 100
             : 0;
 
         return `
@@ -698,12 +697,12 @@ document.addEventListener('DOMContentLoaded', () => {
                     <tr>
                         <td colspan="2" class="text-end">Totals</td>
                         <td class="text-end">$${toCurrency(totalAssesValue)}</td>
-                        <td class="text-end">$${toCurrency(totalCnfPerWeight)}</td>
+                        <td class="text-end">$${toCurrency(totalCnfRate)}</td>
                         <td class="text-end">${formatPercent(totalPercent)}</td>
                     </tr>
                 </tfoot>
             </table>
-            <div class="muted">Percentage change compares calculated C&amp;F per weight against assessed values per weight; assessed value column displays total assessed amounts.</div>
+            <div class="muted">Percentage change compares calculated C&amp;F rates per weight against assessed values converted to the same weight basis; assessed value column displays total assessed amounts.</div>
         `;
     };
 
