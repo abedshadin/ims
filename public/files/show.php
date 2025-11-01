@@ -7,6 +7,7 @@ require_once __DIR__ . '/../../app/Database.php';
 require_once __DIR__ . '/../../app/IdCipher.php';
 require_once __DIR__ . '/../../app/FileMetadata.php';
 require_once __DIR__ . '/../../app/FileLcDetails.php';
+require_once __DIR__ . '/../../app/FileInsuranceDetails.php';
 require_once __DIR__ . '/../../app/BankDirectory.php';
 require_once __DIR__ . '/../../app/ProformaReference.php';
 
@@ -25,6 +26,7 @@ $file = null;
 $vendorProducts = [];
 $proformas = [];
 $lcDetails = null;
+$insuranceDetails = null;
 $bankProfile = null;
 $bankReference = null;
 
@@ -165,6 +167,7 @@ if ($fileId === null) {
             }
 
             $lcDetails = FileLcDetails::load($pdo, $fileId);
+            $insuranceDetails = FileInsuranceDetails::load($pdo, $fileId);
         }
     } catch (PDOException $exception) {
         $loadError = 'Unable to load the selected file right now. Please try again later.';
@@ -221,6 +224,7 @@ $initialData = [
     }, $vendorProducts))),
     'proformas' => $proformas,
     'lc' => $lcDetails,
+    'insurance' => $insuranceDetails,
     'bank' => $bankProfile,
 ];
 
@@ -310,6 +314,18 @@ if ($file !== null) {
                 <div id="lcCollapse" class="accordion-collapse collapse" data-bs-parent="#fileWorkspaceAccordion">
                     <div class="accordion-body">
                         <?php include __DIR__ . '/partials/lc_section.php'; ?>
+                    </div>
+                </div>
+            </div>
+            <div class="accordion-item">
+                <h2 class="accordion-header" id="insuranceHeading">
+                    <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#insuranceCollapse" aria-expanded="false" aria-controls="insuranceCollapse">
+                        Insurance Details
+                    </button>
+                </h2>
+                <div id="insuranceCollapse" class="accordion-collapse collapse" data-bs-parent="#fileWorkspaceAccordion">
+                    <div class="accordion-body">
+                        <?php include __DIR__ . '/partials/insurance_section.php'; ?>
                     </div>
                 </div>
             </div>
