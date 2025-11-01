@@ -654,7 +654,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const assesPerWeight = productWeight > 0 && quantity > 0
                 ? (assesUnit * quantity) / productWeight
                 : 0;
-            const percentChange = cnfRate > 0 ? ((assesPerWeight - cnfRate) / cnfRate) * 100 : 0;
+            const percentChange = cnfRate > 0 ? ((assesValue - cnfRate) / assesValue) * 100 : 0;
 
             totalAssesValue += assesValue;
 
@@ -674,10 +674,10 @@ document.addEventListener('DOMContentLoaded', () => {
         `;
 
         const totalWeight = metrics.totalWeight || 0;
-        const totalAssesPerWeight = totalWeight > 0 ? totalAssesValue / totalWeight : 0;
+        const totalAssesPerWeight = totalWeight > 0 ? totalAssesValue  : 0;
         const totalCnfRate = totalWeight > 0 ? metrics.totalCnf / totalWeight : 0;
         const totalPercent = totalCnfRate > 0
-            ? ((totalAssesPerWeight - totalCnfRate) / totalCnfRate) * 100
+            ? ((totalAssesValue - totalCnfRate) / totalAssesValue) * 100
             : 0;
 
         return `
