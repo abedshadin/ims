@@ -140,8 +140,6 @@
 
         $totalWeightDisplay = rtrim(rtrim(number_format($totalWeight, 3, '.', ''), '0'), '.') ?: '0';
         $freightPerWeightDisplay = $totalWeight > 0 ? number_format($freightPerWeight, 4) : '0.0000';
-        $totalFobDisplay = number_format($totalFob, 2);
-        $totalCnfDisplay = number_format($totalCnf, 2);
         $productCount = count($lines);
         $piHeaderValue = (string) ($proforma['pi_header'] ?? '');
         $reference = is_array($proforma['reference'] ?? null) ? $proforma['reference'] : null;
@@ -227,14 +225,6 @@
                         <div class="workspace-stat">
                             <span class="workspace-stat-label">Freight / Weight</span>
                             <span class="workspace-stat-value">$<?php echo e($freightPerWeightDisplay); ?></span>
-                        </div>
-                        <div class="workspace-stat">
-                            <span class="workspace-stat-label">Total FOB</span>
-                            <span class="workspace-stat-value">$<?php echo e($totalFobDisplay); ?></span>
-                        </div>
-                        <div class="workspace-stat">
-                            <span class="workspace-stat-label">Total C&amp;F</span>
-                            <span class="workspace-stat-value">$<?php echo e($totalCnfDisplay); ?></span>
                         </div>
                     </div>
 
