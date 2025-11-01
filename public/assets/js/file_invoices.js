@@ -652,8 +652,8 @@ document.addEventListener('DOMContentLoaded', () => {
             const assesUnit = parseNumber(line.product.asses_unit_price);
             const assesValue = assesUnit * quantity;
             const cnfTotal = line.cnfTotal || 0;
-            const cnfPerUnit = quantity > 0 ? cnfTotal / quantity : 0;
-            const percentChange = assesUnit > 0 ? ((cnfPerUnit - assesUnit) / assesUnit) * 100 : 0;
+            const cnfPerUnit = line.cnfPerUnit || 0;
+            const percentChange = cnfPerUnit > 0 ? ((assesUnit - cnfPerUnit) / cnfPerUnit) * 100 : 0;
 
             totalAssesValue += assesValue;
             totalCnf += cnfTotal;
@@ -676,8 +676,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
         const totalAssesPerUnit = totalQuantity > 0 ? totalAssesValue / totalQuantity : 0;
         const totalCnfPerUnit = totalQuantity > 0 ? totalCnf / totalQuantity : 0;
-        const totalPercent = totalAssesPerUnit > 0
-            ? ((totalCnfPerUnit - totalAssesPerUnit) / totalAssesPerUnit) * 100
+        const totalPercent = totalCnfPerUnit > 0
+            ? ((totalAssesPerUnit - totalCnfPerUnit) / totalCnfPerUnit) * 100
             : 0;
 
         return `
@@ -1453,7 +1453,15 @@ document.addEventListener('DOMContentLoaded', () => {
         products.forEach((product) => {
             const quantity = parseNumber(product.quantity);
             const fobTotal = parseNumber(product.fob_total);
-            const productWeight = parseNumber(product.item_weight);
+            const unitWeight = parseNumber(product.item_weight);
+            const totalWeightValue = parseNumber(product.total_weight);
+            let productWeight = totalWeightValue;
+
+            if (productWeight <= 0 && unitWeight > 0 && quantity > 0) {
+                productWeight = unitWeight * quantity;
+            } else if (productWeight <= 0) {
+                productWeight = unitWeight;
+            }
 
             totalWeight += productWeight;
             totalFob += fobTotal;
@@ -1464,6 +1472,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 quantity,
                 fobTotal,
                 productWeight,
+                unitWeight,
             });
         });
 
@@ -1479,15 +1488,11 @@ document.addEventListener('DOMContentLoaded', () => {
             const fobPerWeight = hasProductWeight ? line.fobTotal / line.productWeight : 0;
             const freightShare = hasProductWeight && hasTotalWeight ? line.productWeight * freightPerWeight : 0;
             const freightPerUnit = line.quantity > 0 ? freightShare / line.quantity : 0;
-            let cnfPerWeight = 0;
-            let cnfTotal = line.fobTotal;
-            let cnfPerUnit = fobPerUnit;
-
-            if (hasProductWeight && hasTotalWeight) {
-                cnfPerWeight = freightPerWeight + fobPerWeight;
-                cnfTotal = cnfPerWeight * line.productWeight;
-                cnfPerUnit = line.quantity > 0 ? cnfTotal / line.quantity : 0;
-            }
+            const cnfPerWeight = hasProductWeight && hasTotalWeight
+                ? freightPerWeight + fobPerWeight
+                : 0;
+            const cnfTotal = line.fobTotal + freightShare;
+            const cnfPerUnit = line.quantity > 0 ? cnfTotal / line.quantity : 0;
 
             const productWeightDisplay = hasProductWeight ? formatWeight(line.productWeight) : '0';
             const freightComponentDisplay = formatFreight(freightPerWeight);
