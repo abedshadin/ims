@@ -1249,10 +1249,10 @@ document.addEventListener('DOMContentLoaded', () => {
             </td>
             <td class="text-end">
                 <div class="fw-semibold">C&amp;F Total $${escapeHtml(cnfTotalDisplay)}</div>
-                <div class="text-muted small">Calc: ${escapeHtml(cnfCalcExpression)}</div>
-                <div class="text-muted small">Details: ${escapeHtml(cnfCalcComponents)}</div>
-                <div class="text-muted small">Per Weight $${escapeHtml(cnfPerWeightDisplay)} (FOB $${escapeHtml(fobPerWeightDisplay)} + Freight $${escapeHtml(freightPerWeightDisplay)})</div>
-                <div class="text-muted small">Per Unit $${escapeHtml(cnfPerUnitDisplay)}</div>
+            
+
+                <div class="text-muted small">C&amp;F Per Unit $${escapeHtml(cnfPerWeightDisplay)} </div>
+            
             </td>
         `;
         return row;
