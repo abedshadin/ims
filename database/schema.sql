@@ -129,3 +129,18 @@ CREATE TABLE IF NOT EXISTS file_letters_of_credit (
     UNIQUE KEY uniq_file_lc_vendor_file (vendor_file_id),
     CONSTRAINT fk_file_lc_file FOREIGN KEY (vendor_file_id) REFERENCES vendor_files(id) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS file_insurance_details (
+    id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    vendor_file_id BIGINT UNSIGNED NOT NULL,
+    money_receipt_no VARCHAR(100) NOT NULL,
+    money_receipt_date DATE NOT NULL,
+    exchange_rate DECIMAL(15, 4) NOT NULL DEFAULT 0.0000,
+    insurance_value DECIMAL(15, 2) NOT NULL DEFAULT 0.00,
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP NULL DEFAULT NULL ON UPDATE CURRENT_TIMESTAMP,
+    created_by BIGINT UNSIGNED NULL,
+    updated_by BIGINT UNSIGNED NULL,
+    UNIQUE KEY uniq_file_insurance_vendor_file (vendor_file_id),
+    CONSTRAINT fk_file_insurance_file FOREIGN KEY (vendor_file_id) REFERENCES vendor_files(id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;

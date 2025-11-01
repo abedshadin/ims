@@ -70,6 +70,7 @@ document.addEventListener('DOMContentLoaded', () => {
     state.bank = state.bank && typeof state.bank === 'object'
         ? state.bank
         : (state.file && typeof state.file.bank_profile === 'object' ? state.file.bank_profile : null);
+    state.insurance = state.insurance && typeof state.insurance === 'object' ? state.insurance : null;
 
     const piList = document.getElementById('piList');
     const noPiMessage = document.getElementById('noPiMessage');
@@ -94,6 +95,10 @@ document.addEventListener('DOMContentLoaded', () => {
     const lcAlert = document.getElementById('lcAlert');
     const lcSummary = document.getElementById('lcSummary');
     const lcEmptyMessage = lcSummary ? lcSummary.querySelector('[data-lc-empty-message]') : null;
+    const insuranceForm = document.getElementById('insuranceForm');
+    const insuranceAlert = document.getElementById('insuranceAlert');
+    const insuranceSummary = document.getElementById('insuranceSummary');
+    const insuranceEmptyMessage = insuranceSummary ? insuranceSummary.querySelector('[data-insurance-empty-message]') : null;
     let activePiToken = null;
     let productModalInstance = null;
 
@@ -892,6 +897,102 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     };
 
+    const getInsuranceFieldElement = (name) => {
+        return insuranceSummary ? insuranceSummary.querySelector(`[data-insurance-field="${name}"]`) : null;
+    };
+
+    const setInsuranceFieldText = (name, value, fallback = '—') => {
+        const element = getInsuranceFieldElement(name);
+        if (!element) {
+            return;
+        }
+
+        const display = value && value !== '' ? value : fallback;
+        element.textContent = display;
+    };
+
+    const formatExchangeRate = (value) => {
+        return parseNumber(value).toFixed(4);
+    };
+
+    const syncInsuranceForm = (insurance) => {
+        if (!insuranceForm) {
+            return;
+        }
+
+        const mappings = {
+            money_receipt_no: 'money_receipt_no',
+            money_receipt_date: 'money_receipt_date',
+            exchange_rate: 'exchange_rate',
+            insurance_value: 'insurance_value',
+        };
+
+        Object.entries(mappings).forEach(([key, fieldName]) => {
+            const field = insuranceForm.elements[fieldName];
+            if (!field) {
+                return;
+            }
+
+            const value = insurance && typeof insurance === 'object' ? (insurance[key] || '') : '';
+            field.value = value;
+        });
+    };
+
+    const updateInsuranceSummary = (insurance) => {
+        state.insurance = insurance && typeof insurance === 'object' ? insurance : null;
+
+        const hasInsuranceDetails = Boolean(
+            state.insurance &&
+            (state.insurance.money_receipt_no || state.insurance.money_receipt_date || state.insurance.insurance_value)
+        );
+
+        if (state.insurance) {
+            setInsuranceFieldText('money_receipt_no', state.insurance.money_receipt_no, '—');
+            setInsuranceFieldText(
+                'money_receipt_date_human',
+                state.insurance.money_receipt_date_human || state.insurance.money_receipt_date,
+                '—',
+            );
+
+            const exchangeRateElement = getInsuranceFieldElement('exchange_rate');
+            if (exchangeRateElement) {
+                const exchangeValue = state.insurance.exchange_rate && state.insurance.exchange_rate !== ''
+                    ? formatExchangeRate(state.insurance.exchange_rate)
+                    : formatExchangeRate(state.insurance.exchange_rate_formatted || '0');
+                exchangeRateElement.textContent = exchangeValue;
+            }
+
+            const insuranceValueElement = getInsuranceFieldElement('insurance_value');
+            if (insuranceValueElement) {
+                const valueAmount = state.insurance.insurance_value && state.insurance.insurance_value !== ''
+                    ? toCurrency(state.insurance.insurance_value)
+                    : toCurrency(state.insurance.insurance_value_formatted || '0');
+                insuranceValueElement.textContent = `$${valueAmount}`;
+            }
+        } else {
+            setInsuranceFieldText('money_receipt_no', '', '—');
+            setInsuranceFieldText('money_receipt_date_human', '', '—');
+
+            const exchangeRateElement = getInsuranceFieldElement('exchange_rate');
+            if (exchangeRateElement) {
+                exchangeRateElement.textContent = formatExchangeRate(0);
+            }
+
+            const insuranceValueElement = getInsuranceFieldElement('insurance_value');
+            if (insuranceValueElement) {
+                insuranceValueElement.textContent = '$0.00';
+            }
+        }
+
+        if (insuranceEmptyMessage) {
+            if (hasInsuranceDetails) {
+                insuranceEmptyMessage.classList.add('d-none');
+            } else {
+                insuranceEmptyMessage.classList.remove('d-none');
+            }
+        }
+    };
+
     const populateVendorProductSelect = () => {
         if (!vendorProductSelect) {
             return;
@@ -1440,6 +1541,62 @@ document.addEventListener('DOMContentLoaded', () => {
             });
         }
 
+        if (insuranceForm) {
+            insuranceForm.addEventListener('submit', async (event) => {
+                event.preventDefault();
+                resetAlert(insuranceAlert);
+                clearFormValidation(insuranceForm);
+
+                const submitButton = insuranceForm.querySelector('button[type="submit"]');
+                if (submitButton) {
+                    submitButton.disabled = true;
+                }
+
+                try {
+                    const formData = new FormData(insuranceForm);
+                    const response = await fetch('insurance_store.php', {
+                        method: 'POST',
+                        body: formData,
+                    });
+
+                    if (response.status === 401) {
+                        window.location.reload();
+                        return;
+                    }
+
+                    let result;
+
+                    try {
+                        result = await response.json();
+                    } catch (error) {
+                        throw new Error('Unexpected response received.');
+                    }
+
+                    if (!response.ok || result.status !== 'success') {
+                        applyFormErrors(insuranceForm, result.errors || {});
+                        throw new Error(result.message || 'Unable to save the insurance details.');
+                    }
+
+                    if (result.insurance) {
+                        updateInsuranceSummary(result.insurance);
+                        syncInsuranceForm(result.insurance);
+                    }
+
+                    if (result.file_meta) {
+                        updateFileMeta(result.file_meta);
+                    }
+
+                    showAlert(insuranceAlert, result.message || 'Insurance details saved successfully.', 'success');
+                } catch (error) {
+                    showAlert(insuranceAlert, error.message, 'danger');
+                } finally {
+                    if (submitButton) {
+                        submitButton.disabled = false;
+                    }
+                }
+            });
+        }
+
         if (createPiForm) {
             createPiForm.addEventListener('submit', async (event) => {
                 event.preventDefault();
@@ -1855,6 +2012,8 @@ document.addEventListener('DOMContentLoaded', () => {
     populateVendorProductSelect();
     updateLcSummary(state.lc);
     syncLcForm(state.lc);
+    updateInsuranceSummary(state.insurance);
+    syncInsuranceForm(state.insurance);
     refreshPiList();
     attachEventListeners();
 });
