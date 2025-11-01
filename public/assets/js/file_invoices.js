@@ -688,7 +688,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         <th class="text-center" style="width: 8%">Serial No</th>
                         <th>Product Name</th>
                         <th class="text-end" style="width: 18%">Asses Value</th>
-                        <th class="text-end" style="width: 18%">C&amp;F Per Unit</th>
+                        <th class="text-end" style="width: 18%">C&amp;F Per Weight</th>
                         <th class="text-end" style="width: 18%">% Change</th>
                     </tr>
                 </thead>
