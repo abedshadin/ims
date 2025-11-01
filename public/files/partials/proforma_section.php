@@ -45,7 +45,22 @@
         <?php
         $piToken = (string) ($proforma['token'] ?? '');
         $products = is_array($proforma['products'] ?? null) ? $proforma['products'] : [];
-        $freightAmount = (float) ($proforma['freight_amount'] ?? 0);
+
+        $parseNumeric = static function ($value): float {
+            if ($value === null || $value === '') {
+                return 0.0;
+            }
+
+            if (is_numeric($value)) {
+                return (float) $value;
+            }
+
+            $sanitised = preg_replace('/[^0-9.+\-]/', '', (string) $value);
+
+            return is_numeric($sanitised) ? (float) $sanitised : 0.0;
+        };
+
+        $freightAmount = $parseNumeric($proforma['freight_amount'] ?? 0);
         $totalWeight = 0.0;
         $totalFob = 0.0;
         $lines = [];
@@ -53,9 +68,9 @@
         $tolerancePercentageDisplay = number_format($tolerancePercentage, 2);
 
         foreach ($products as $product) {
-            $quantity = (float) ($product['quantity'] ?? 0);
-            $fobTotal = (float) ($product['fob_total'] ?? 0);
-            $itemWeight = (float) ($product['item_weight'] ?? 0);
+            $quantity = $parseNumeric($product['quantity'] ?? 0);
+            $fobTotal = $parseNumeric($product['fob_total'] ?? 0);
+            $itemWeight = $parseNumeric($product['item_weight'] ?? 0);
             $lineWeight = $itemWeight * $quantity;
 
             $totalWeight += $lineWeight;
@@ -71,30 +86,60 @@
         }
 
         $freightPerWeight = $totalWeight > 0 ? $freightAmount / $totalWeight : 0.0;
+        $freightAmountDisplay = number_format($freightAmount, 2);
+        $totalWeightExpressionDisplay = $totalWeight > 0
+            ? (rtrim(rtrim(number_format($totalWeight, 3, '.', ''), '0'), '.') ?: '0')
+            : '0';
         $totalCnf = 0.0;
 
         foreach ($lines as $index => $line) {
             $quantity = $line['quantity'];
             $fobTotal = $line['fob_total'];
             $itemWeight = $line['item_weight'];
-            $freightPerUnit = $itemWeight * $freightPerWeight;
+            $lineWeight = $line['line_weight'];
+
             $fobPerUnit = $quantity > 0 ? $fobTotal / $quantity : 0.0;
-            $freightShare = $freightPerUnit * $quantity;
-            $cnfPerUnit = $freightPerUnit + $fobPerUnit;
-            $cnfTotal = $cnfPerUnit * $quantity;
+            $hasItemWeight = $itemWeight > 0;
+            $hasTotalWeight = $totalWeight > 0;
+            $fobPerWeight = $hasItemWeight ? ($fobTotal / $itemWeight) : 0.0;
+
+            if ($hasItemWeight && $hasTotalWeight) {
+                $cnfPerWeight = $freightPerWeight + $fobPerWeight;
+                $cnfPerUnit = $cnfPerWeight * $itemWeight;
+                $cnfTotal = $cnfPerUnit * $quantity;
+            } else {
+                $cnfPerWeight = 0.0;
+                $cnfPerUnit = $fobPerUnit;
+                $cnfTotal = $fobTotal;
+            }
+
             $totalCnf += $cnfTotal;
 
-            $lines[$index]['freight_per_unit'] = $freightPerUnit;
-            $lines[$index]['freight_share'] = $freightShare;
+            $itemWeightDisplay = $hasItemWeight
+                ? (rtrim(rtrim(number_format($itemWeight, 3, '.', ''), '0'), '.') ?: '0')
+                : '0';
+            $freightComponentDisplay = number_format($freightPerWeight, 4);
+            $fobComponentDisplay = number_format($fobPerWeight, 4);
+            $cnfPerWeightDisplay = number_format($cnfPerWeight, 4);
+            $calcExpression = ($hasItemWeight && $hasTotalWeight)
+                ? sprintf('($%s ÷ %s) + ($%s ÷ %s) = $%s per weight', $freightAmountDisplay, $totalWeightExpressionDisplay, number_format($fobTotal, 2), $itemWeightDisplay, $cnfPerWeightDisplay)
+                : 'Calculation unavailable (missing weight)';
+            $calcComponents = ($hasItemWeight && $hasTotalWeight)
+                ? sprintf('Freight/Weight $%s + FOB/Weight $%s = $%s per weight', $freightComponentDisplay, $fobComponentDisplay, $cnfPerWeightDisplay)
+                : 'Freight or weight data missing for this product';
+
+            $lines[$index]['freight_per_weight'] = $freightPerWeight;
+            $lines[$index]['fob_per_weight'] = $fobPerWeight;
             $lines[$index]['fob_per_unit'] = $fobPerUnit;
             $lines[$index]['cnf_per_unit'] = $cnfPerUnit;
+            $lines[$index]['cnf_per_weight'] = $cnfPerWeight;
             $lines[$index]['cnf_total'] = $cnfTotal;
+            $lines[$index]['cnf_calc_expression'] = $calcExpression;
+            $lines[$index]['cnf_calc_components'] = $calcComponents;
         }
 
         $totalWeightDisplay = rtrim(rtrim(number_format($totalWeight, 3, '.', ''), '0'), '.') ?: '0';
         $freightPerWeightDisplay = $totalWeight > 0 ? number_format($freightPerWeight, 4) : '0.0000';
-        $totalFobDisplay = number_format($totalFob, 2);
-        $totalCnfDisplay = number_format($totalCnf, 2);
         $productCount = count($lines);
         $piHeaderValue = (string) ($proforma['pi_header'] ?? '');
         $reference = is_array($proforma['reference'] ?? null) ? $proforma['reference'] : null;
@@ -181,14 +226,6 @@
                             <span class="workspace-stat-label">Freight / Weight</span>
                             <span class="workspace-stat-value">$<?php echo e($freightPerWeightDisplay); ?></span>
                         </div>
-                        <div class="workspace-stat">
-                            <span class="workspace-stat-label">Total FOB</span>
-                            <span class="workspace-stat-value">$<?php echo e($totalFobDisplay); ?></span>
-                        </div>
-                        <div class="workspace-stat">
-                            <span class="workspace-stat-label">Total C&amp;F</span>
-                            <span class="workspace-stat-value">$<?php echo e($totalCnfDisplay); ?></span>
-                        </div>
                     </div>
 
                     <div class="table-responsive mt-4">
@@ -224,11 +261,14 @@
                                 $quantityDisplay = rtrim(rtrim(number_format($line['quantity'], 3, '.', ''), '0'), '.') ?: '0';
                                 $fobDisplay = number_format($line['fob_total'], 2);
                                 $fobPerUnitDisplay = number_format($line['fob_per_unit'] ?? 0, 2);
-                                $freightPerUnitDisplay = number_format($line['freight_per_unit'] ?? 0, 2);
-                                $freightShareDisplay = number_format($line['freight_share'] ?? 0, 2);
+                                $fobPerWeightDisplay = number_format($line['fob_per_weight'] ?? 0, 4);
+                                $freightPerWeightDisplay = number_format($line['freight_per_weight'] ?? 0, 4);
                                 $cnfPerUnitDisplay = number_format($line['cnf_per_unit'] ?? 0, 2);
+                                $cnfPerWeightDisplay = number_format($line['cnf_per_weight'] ?? 0, 4);
                                 $cnfTotalDisplay = number_format($line['cnf_total'] ?? 0, 2);
                                 $lineWeightDisplay = rtrim(rtrim(number_format($line['line_weight'], 3, '.', ''), '0'), '.') ?: '0';
+                                $cnfCalcExpression = (string) ($line['cnf_calc_expression'] ?? '');
+                                $cnfCalcComponents = (string) ($line['cnf_calc_components'] ?? '');
                                 ?>
                                 <tr data-product-token="<?php echo e($productToken); ?>" data-pi-token="<?php echo e($piToken); ?>">
                                     <td>
@@ -265,8 +305,10 @@
                                     </td>
                                     <td class="text-end">
                                         <div class="fw-semibold">C&amp;F Total $<?php echo e($cnfTotalDisplay); ?></div>
-                                        <div class="text-muted small">Per Unit $<?php echo e($cnfPerUnitDisplay); ?> (FOB $<?php echo e($fobPerUnitDisplay); ?> + Freight $<?php echo e($freightPerUnitDisplay); ?>)</div>
-                                        <div class="text-muted small">Freight Share $<?php echo e($freightShareDisplay); ?></div>
+                                        <div class="text-muted small">Calc: <?php echo e($cnfCalcExpression); ?></div>
+                                        <div class="text-muted small">Details: <?php echo e($cnfCalcComponents); ?></div>
+                                        <div class="text-muted small">Per Weight $<?php echo e($cnfPerWeightDisplay); ?> (FOB $<?php echo e($fobPerWeightDisplay); ?> + Freight $<?php echo e($freightPerWeightDisplay); ?>)</div>
+                                        <div class="text-muted small">Per Unit $<?php echo e($cnfPerUnitDisplay); ?></div>
                                     </td>
                                 </tr>
                             <?php endforeach; ?>
