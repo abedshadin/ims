@@ -91,18 +91,35 @@
         foreach ($lines as $index => $line) {
             $quantity = $line['quantity'];
             $fobTotal = $line['fob_total'];
+            $itemWeight = $line['item_weight'];
             $lineWeight = $line['line_weight'];
 
             $fobPerUnit = $quantity > 0 ? $fobTotal / $quantity : 0.0;
             $freightPerWeightShare = $freightPerWeight;
-            $freightShare = $freightPerWeightShare * $lineWeight;
-            $fobPerWeight = $lineWeight > 0 ? $fobTotal / $lineWeight : 0.0;
-            $cnfPerWeight = $lineWeight > 0 ? ($freightPerWeightShare + $fobPerWeight) : 0.0;
-            $cnfTotal = $freightShare + $fobTotal;
-            if ($lineWeight <= 0) {
-                $cnfTotal = $fobTotal;
+            $freightShare = $lineWeight > 0 ? $freightPerWeightShare * $lineWeight : 0.0;
+            $freightPerUnit = $itemWeight > 0 ? $freightPerWeightShare * $itemWeight : 0.0;
+
+            $fobPerWeight = 0.0;
+            if ($itemWeight > 0) {
+                // Apply the provided formula: (Total Freight / Total Weight) + (FOB Total / Product unit weight)
+                $fobPerWeight = $fobPerUnit / $itemWeight;
             }
-            $cnfPerUnit = $quantity > 0 ? $cnfTotal / $quantity : 0.0;
+
+            $cnfPerWeight = $itemWeight > 0 ? ($freightPerWeightShare + $fobPerWeight) : 0.0;
+            $cnfPerUnit = ($itemWeight > 0)
+                ? ($cnfPerWeight * $itemWeight)
+                : ($fobPerUnit + $freightPerUnit);
+            $cnfTotal = ($quantity > 0)
+                ? ($cnfPerUnit * $quantity)
+                : ($freightShare + $fobTotal);
+
+            if ($lineWeight <= 0) {
+                $freightShare = 0.0;
+                $cnfTotal = $fobTotal;
+                $cnfPerUnit = $fobPerUnit;
+                $cnfPerWeight = 0.0;
+            }
+
             $totalCnf += $cnfTotal;
 
             $lines[$index]['freight_per_weight'] = $freightPerWeightShare;
