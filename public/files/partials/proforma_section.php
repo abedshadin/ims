@@ -45,7 +45,22 @@
         <?php
         $piToken = (string) ($proforma['token'] ?? '');
         $products = is_array($proforma['products'] ?? null) ? $proforma['products'] : [];
-        $freightAmount = (float) ($proforma['freight_amount'] ?? 0);
+
+        $parseNumeric = static function ($value): float {
+            if ($value === null || $value === '') {
+                return 0.0;
+            }
+
+            if (is_numeric($value)) {
+                return (float) $value;
+            }
+
+            $sanitised = preg_replace('/[^0-9.+\-]/', '', (string) $value);
+
+            return is_numeric($sanitised) ? (float) $sanitised : 0.0;
+        };
+
+        $freightAmount = $parseNumeric($proforma['freight_amount'] ?? 0);
         $totalWeight = 0.0;
         $totalFob = 0.0;
         $lines = [];
@@ -53,9 +68,9 @@
         $tolerancePercentageDisplay = number_format($tolerancePercentage, 2);
 
         foreach ($products as $product) {
-            $quantity = (float) ($product['quantity'] ?? 0);
-            $fobTotal = (float) ($product['fob_total'] ?? 0);
-            $itemWeight = (float) ($product['item_weight'] ?? 0);
+            $quantity = $parseNumeric($product['quantity'] ?? 0);
+            $fobTotal = $parseNumeric($product['fob_total'] ?? 0);
+            $itemWeight = $parseNumeric($product['item_weight'] ?? 0);
             $lineWeight = $itemWeight * $quantity;
 
             $totalWeight += $lineWeight;
@@ -79,11 +94,14 @@
             $lineWeight = $line['line_weight'];
 
             $fobPerUnit = $quantity > 0 ? $fobTotal / $quantity : 0.0;
-            $fobPerWeight = $lineWeight > 0 ? $fobTotal / $lineWeight : 0.0;
             $freightPerWeightShare = $freightPerWeight;
             $freightShare = $freightPerWeightShare * $lineWeight;
-            $cnfPerWeight = $freightPerWeightShare + $fobPerWeight;
-            $cnfTotal = $cnfPerWeight * $lineWeight;
+            $fobPerWeight = $lineWeight > 0 ? $fobTotal / $lineWeight : 0.0;
+            $cnfPerWeight = $lineWeight > 0 ? ($freightPerWeightShare + $fobPerWeight) : 0.0;
+            $cnfTotal = $freightShare + $fobTotal;
+            if ($lineWeight <= 0) {
+                $cnfTotal = $fobTotal;
+            }
             $cnfPerUnit = $quantity > 0 ? $cnfTotal / $quantity : 0.0;
             $totalCnf += $cnfTotal;
 
@@ -229,11 +247,11 @@
                                 $quantityDisplay = rtrim(rtrim(number_format($line['quantity'], 3, '.', ''), '0'), '.') ?: '0';
                                 $fobDisplay = number_format($line['fob_total'], 2);
                                 $fobPerUnitDisplay = number_format($line['fob_per_unit'] ?? 0, 2);
-                                $fobPerWeightDisplay = number_format($line['fob_per_weight'] ?? 0, 2);
-                                $freightPerWeightDisplay = number_format($line['freight_per_weight'] ?? 0, 2);
+                                $fobPerWeightDisplay = number_format($line['fob_per_weight'] ?? 0, 4);
+                                $freightPerWeightDisplay = number_format($line['freight_per_weight'] ?? 0, 4);
                                 $freightShareDisplay = number_format($line['freight_share'] ?? 0, 2);
                                 $cnfPerUnitDisplay = number_format($line['cnf_per_unit'] ?? 0, 2);
-                                $cnfPerWeightDisplay = number_format($line['cnf_per_weight'] ?? 0, 2);
+                                $cnfPerWeightDisplay = number_format($line['cnf_per_weight'] ?? 0, 4);
                                 $cnfTotalDisplay = number_format($line['cnf_total'] ?? 0, 2);
                                 $lineWeightDisplay = rtrim(rtrim(number_format($line['line_weight'], 3, '.', ''), '0'), '.') ?: '0';
                                 ?>
