@@ -1201,11 +1201,14 @@ document.addEventListener('DOMContentLoaded', () => {
         const quantityDisplay = formatQuantity(line.quantity);
         const fobDisplay = toCurrency(line.fobTotal);
         const fobPerUnitDisplay = toCurrency(line.fobPerUnit || (line.quantity > 0 ? line.fobTotal / line.quantity : 0));
-        const freightPerUnitDisplay = toCurrency(line.freightPerUnit || 0);
-        const freightShareDisplay = toCurrency(line.freightShare || 0);
         const cnfPerUnitDisplay = toCurrency(line.cnfPerUnit || 0);
         const cnfTotalDisplay = toCurrency(line.cnfTotal || 0);
-        const lineWeightDisplay = formatWeight(line.lineWeight);
+        const productWeightDisplay = formatWeight(line.productWeight);
+        const freightPerWeightDisplay = formatFreight(line.freightPerWeight || 0);
+        const fobPerWeightDisplay = formatFreight(line.fobPerWeight || 0);
+        const cnfPerWeightDisplay = formatFreight(line.cnfPerWeight || 0);
+        const cnfCalcExpression = line.cnfCalcExpression || 'Calculation unavailable (missing weight)';
+        const cnfCalcComponents = line.cnfCalcComponents || 'Freight or weight data missing for this product';
         const row = document.createElement('tr');
         const productToken = product.token || '';
         const canDelete = productToken !== '';
@@ -1227,7 +1230,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 <div>${escapeHtml(product.product_size || '')}</div>
                 <div class="text-muted small">Unit: ${escapeHtml(product.unit || '')}</div>
                 <div class="text-muted small">Unit Wt: ${escapeHtml(product.item_weight || '')}</div>
-                <div class="text-muted small">Total Wt: ${escapeHtml(lineWeightDisplay)}</div>
+                <div class="text-muted small">Total Wt: ${escapeHtml(productWeightDisplay)}</div>
             </td>
             <td class="text-end">
                 <div class="fw-semibold">$${escapeHtml(product.rate_formatted || toCurrency(product.rate || '0'))}</div>
@@ -1246,8 +1249,10 @@ document.addEventListener('DOMContentLoaded', () => {
             </td>
             <td class="text-end">
                 <div class="fw-semibold">C&amp;F Total $${escapeHtml(cnfTotalDisplay)}</div>
-                <div class="text-muted small">Per Unit $${escapeHtml(cnfPerUnitDisplay)} (FOB $${escapeHtml(fobPerUnitDisplay)} + Freight $${escapeHtml(freightPerUnitDisplay)})</div>
-                <div class="text-muted small">Freight Share $${escapeHtml(freightShareDisplay)}</div>
+                <div class="text-muted small">Calc: ${escapeHtml(cnfCalcExpression)}</div>
+                <div class="text-muted small">Details: ${escapeHtml(cnfCalcComponents)}</div>
+                <div class="text-muted small">Per Weight $${escapeHtml(cnfPerWeightDisplay)} (FOB $${escapeHtml(fobPerWeightDisplay)} + Freight $${escapeHtml(freightPerWeightDisplay)})</div>
+                <div class="text-muted small">Per Unit $${escapeHtml(cnfPerUnitDisplay)}</div>
             </td>
         `;
         return row;
@@ -1441,10 +1446,9 @@ document.addEventListener('DOMContentLoaded', () => {
         products.forEach((product) => {
             const quantity = parseNumber(product.quantity);
             const fobTotal = parseNumber(product.fob_total);
-            const weightPerUnit = parseNumber(product.item_weight);
-            const lineWeight = weightPerUnit * quantity;
+            const productWeight = parseNumber(product.item_weight);
 
-            totalWeight += lineWeight;
+            totalWeight += productWeight;
             totalFob += fobTotal;
             totalQuantity += quantity;
 
@@ -1452,26 +1456,54 @@ document.addEventListener('DOMContentLoaded', () => {
                 product,
                 quantity,
                 fobTotal,
-                weightPerUnit,
-                lineWeight,
+                productWeight,
             });
         });
 
         const totalFreight = parseNumber(proforma.freight_amount);
         const freightPerWeight = totalWeight > 0 ? totalFreight / totalWeight : 0;
+        const freightAmountDisplay = toCurrency(totalFreight);
+        const totalWeightExpressionDisplay = totalWeight > 0 ? formatWeight(totalWeight) : '0';
 
         lines.forEach((line) => {
+            const hasProductWeight = line.productWeight > 0;
+            const hasTotalWeight = totalWeight > 0;
             const fobPerUnit = line.quantity > 0 ? line.fobTotal / line.quantity : 0;
-            const freightPerUnit = line.weightPerUnit * freightPerWeight;
-            const freightShare = freightPerUnit * line.quantity;
-            const cnfPerUnit = freightPerUnit + fobPerUnit;
-            const cnfTotal = cnfPerUnit * line.quantity;
+            const fobPerWeight = hasProductWeight ? line.fobTotal / line.productWeight : 0;
+            const freightShare = hasProductWeight && hasTotalWeight ? line.productWeight * freightPerWeight : 0;
+            const freightPerUnit = line.quantity > 0 ? freightShare / line.quantity : 0;
+            let cnfPerWeight = 0;
+            let cnfTotal = line.fobTotal;
+            let cnfPerUnit = fobPerUnit;
+
+            if (hasProductWeight && hasTotalWeight) {
+                cnfPerWeight = freightPerWeight + fobPerWeight;
+                cnfTotal = cnfPerWeight * line.productWeight;
+                cnfPerUnit = line.quantity > 0 ? cnfTotal / line.quantity : 0;
+            }
+
+            const productWeightDisplay = hasProductWeight ? formatWeight(line.productWeight) : '0';
+            const freightComponentDisplay = formatFreight(freightPerWeight);
+            const fobComponentDisplay = formatFreight(fobPerWeight);
+            const cnfPerWeightDisplay = formatFreight(cnfPerWeight);
+            const fobTotalDisplay = toCurrency(line.fobTotal);
+            const calcExpression = (hasProductWeight && hasTotalWeight)
+                ? `($${freightAmountDisplay} ÷ ${totalWeightExpressionDisplay}) + ($${fobTotalDisplay} ÷ ${productWeightDisplay}) = $${cnfPerWeightDisplay} per weight`
+                : 'Calculation unavailable (missing weight)';
+            const calcComponents = (hasProductWeight && hasTotalWeight)
+                ? `Freight/Weight $${freightComponentDisplay} + FOB/Weight $${fobComponentDisplay} = $${cnfPerWeightDisplay} per weight`
+                : 'Freight or weight data missing for this product';
 
             line.fobPerUnit = fobPerUnit;
+            line.fobPerWeight = fobPerWeight;
             line.freightPerUnit = freightPerUnit;
+            line.freightPerWeight = hasTotalWeight ? freightPerWeight : 0;
             line.freightShare = freightShare;
             line.cnfPerUnit = cnfPerUnit;
+            line.cnfPerWeight = cnfPerWeight;
             line.cnfTotal = cnfTotal;
+            line.cnfCalcExpression = calcExpression;
+            line.cnfCalcComponents = calcComponents;
 
             totalCnf += cnfTotal;
         });
@@ -1506,9 +1538,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const toleranceValue = formatToleranceValue(proforma.tolerance_percentage);
         const toleranceDisplay = formatTolerance(toleranceValue);
         const totalWeightDisplay = formatWeight(metrics.totalWeight);
-        const freightPerWeightDisplay = parseNumber(metrics.freightPerWeight).toFixed(4);
-        const totalFobDisplay = toCurrency(metrics.totalFob);
-        const totalCnfDisplay = toCurrency(metrics.totalCnf);
+        const freightPerWeightDisplay = formatFreight(metrics.freightPerWeight);
 
         card.innerHTML = `
             <div class="card-header bg-white border-0 pb-0">
@@ -1583,14 +1613,6 @@ document.addEventListener('DOMContentLoaded', () => {
                     <div class="workspace-stat">
                         <span class="workspace-stat-label">Freight / Weight</span>
                         <span class="workspace-stat-value">$${escapeHtml(freightPerWeightDisplay)}</span>
-                    </div>
-                    <div class="workspace-stat">
-                        <span class="workspace-stat-label">Total FOB</span>
-                        <span class="workspace-stat-value">$${escapeHtml(totalFobDisplay)}</span>
-                    </div>
-                    <div class="workspace-stat">
-                        <span class="workspace-stat-label">Total C&amp;F</span>
-                        <span class="workspace-stat-value">$${escapeHtml(totalCnfDisplay)}</span>
                     </div>
                 </div>
 
