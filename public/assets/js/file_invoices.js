@@ -95,6 +95,8 @@ document.addEventListener('DOMContentLoaded', () => {
     const lcAlert = document.getElementById('lcAlert');
     const lcSummary = document.getElementById('lcSummary');
     const lcEmptyMessage = lcSummary ? lcSummary.querySelector('[data-lc-empty-message]') : null;
+    const lcCurrencySelect = lcForm ? lcForm.elements.currency : null;
+    const lcCurrencyPrefix = lcForm ? lcForm.querySelector('[data-lc-currency-prefix]') : null;
     const insuranceForm = document.getElementById('insuranceForm');
     const insuranceAlert = document.getElementById('insuranceAlert');
     const insuranceSummary = document.getElementById('insuranceSummary');
@@ -168,6 +170,23 @@ document.addEventListener('DOMContentLoaded', () => {
 
     const toCurrency = (value) => {
         return parseNumber(value).toFixed(2);
+    };
+
+    const currencySymbols = {
+        USD: '$',
+        EURO: '€',
+    };
+
+    const getCurrencySymbol = (currency) => {
+        return currencySymbols[currency] || '$';
+    };
+
+    const applyCurrencyPrefix = (currency) => {
+        if (!lcCurrencyPrefix) {
+            return;
+        }
+
+        lcCurrencyPrefix.textContent = getCurrencySymbol(currency);
     };
 
     const formatQuantity = (value) => {
@@ -820,6 +839,7 @@ document.addEventListener('DOMContentLoaded', () => {
             lc_number: 'lc_number',
             lc_type: 'lc_type',
             lc_date: 'lc_date',
+            currency: 'currency',
             subject_line: 'subject_line',
             lc_amount: 'lc_amount',
             latest_shipment_date: 'latest_shipment_date',
@@ -839,6 +859,13 @@ document.addEventListener('DOMContentLoaded', () => {
                 field.value = value;
             }
         });
+
+        if (lcCurrencySelect) {
+            const currentCurrency = lcCurrencySelect.value || lcCurrencySelect.dataset.defaultValue || 'USD';
+            applyCurrencyPrefix(currentCurrency);
+        } else {
+            applyCurrencyPrefix('USD');
+        }
     };
 
     const updateLcSummary = (lc) => {
@@ -864,6 +891,7 @@ document.addEventListener('DOMContentLoaded', () => {
             setFieldText('lc_type', state.lc.lc_type, '—');
             setFieldText('subject_line', state.lc.subject_line, '—');
             setFieldText('lc_date_human', state.lc.lc_date_human || state.lc.lc_date, '—');
+            setFieldText('currency', state.lc.currency, '—');
             setFieldText('latest_shipment_date_human', state.lc.latest_shipment_date_human || state.lc.latest_shipment_date, '—');
             setFieldText('expiry_date_human', state.lc.expiry_date_human || state.lc.expiry_date, '—');
 
@@ -872,19 +900,21 @@ document.addEventListener('DOMContentLoaded', () => {
                 const amountValue = state.lc.lc_amount && state.lc.lc_amount !== ''
                     ? toCurrency(state.lc.lc_amount)
                     : toCurrency(state.lc.lc_amount_formatted || '0');
-                amountElement.textContent = `$${amountValue}`;
+                const currencySymbol = getCurrencySymbol(state.lc.currency);
+                amountElement.textContent = `${currencySymbol}${amountValue}`;
             }
         } else {
             setFieldText('lc_number', '', '—');
             setFieldText('lc_type', '', '—');
             setFieldText('subject_line', '', '—');
             setFieldText('lc_date_human', '', '—');
+            setFieldText('currency', '', '—');
             setFieldText('latest_shipment_date_human', '', '—');
             setFieldText('expiry_date_human', '', '—');
 
             const amountElement = getLcFieldElement('lc_amount');
             if (amountElement) {
-                amountElement.textContent = '$0.00';
+                amountElement.textContent = `${getCurrencySymbol('USD')}0.00`;
             }
         }
 
@@ -1485,6 +1515,13 @@ document.addEventListener('DOMContentLoaded', () => {
     };
 
     const attachEventListeners = () => {
+        if (lcCurrencySelect) {
+            lcCurrencySelect.addEventListener('change', () => {
+                const currentCurrency = lcCurrencySelect.value || lcCurrencySelect.dataset.defaultValue || 'USD';
+                applyCurrencyPrefix(currentCurrency);
+            });
+        }
+
         if (lcForm) {
             lcForm.addEventListener('submit', async (event) => {
                 event.preventDefault();

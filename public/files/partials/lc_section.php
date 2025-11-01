@@ -6,6 +6,12 @@ $lcAmount = $lcDetails['lc_amount'] ?? '';
 $subjectLine = $lcDetails['subject_line'] ?? '';
 $subjectLineValue = $subjectLine !== '' ? $subjectLine : 'Opening L/C for Import';
 $lcAmountFormatted = $lcDetails['lc_amount_formatted'] ?? '0.00';
+$lcCurrency = strtoupper($lcDetails['currency'] ?? 'USD');
+if (!in_array($lcCurrency, ['USD', 'EURO'], true)) {
+    $lcCurrency = 'USD';
+}
+$lcCurrencySymbol = $lcCurrency === 'EURO' ? '€' : '$';
+$lcAmountDisplay = $lcCurrencySymbol . $lcAmountFormatted;
 $lcDateHuman = $lcDetails['lc_date_human'] ?? '';
 $latestShipment = $lcDetails['latest_shipment_date'] ?? '';
 $latestShipmentHuman = $lcDetails['latest_shipment_date_human'] ?? '';
@@ -38,9 +44,16 @@ $hasLcDetails = $lcNumber !== '';
                         <input class="form-control" type="date" id="lc_date" name="lc_date" value="<?php echo e($lcDate); ?>" required>
                     </div>
                     <div class="col-md-6">
+                        <label class="form-label" for="currency">Currency</label>
+                        <select class="form-select" id="currency" name="currency" required data-default-value="USD">
+                            <option value="USD"<?php echo $lcCurrency === 'USD' ? ' selected' : ''; ?>>USD</option>
+                            <option value="EURO"<?php echo $lcCurrency === 'EURO' ? ' selected' : ''; ?>>EURO</option>
+                        </select>
+                    </div>
+                    <div class="col-md-6">
                         <label class="form-label" for="lc_amount">LC Amount</label>
                         <div class="input-group">
-                            <span class="input-group-text">$</span>
+                            <span class="input-group-text" data-lc-currency-prefix><?php echo e($lcCurrencySymbol); ?></span>
                             <input class="form-control" type="number" step="0.01" min="0" id="lc_amount" name="lc_amount" value="<?php echo e($lcAmount); ?>" placeholder="0.00" required>
                         </div>
                     </div>
@@ -88,8 +101,12 @@ $hasLcDetails = $lcNumber !== '';
                             <dd class="fw-semibold mb-0" data-lc-field="lc_date_human"><?php echo $hasLcDetails ? e($lcDateHuman ?: $lcDate) : '—'; ?></dd>
                         </div>
                         <div class="col">
+                            <dt class="text-uppercase text-muted">Currency</dt>
+                            <dd class="fw-semibold mb-0" data-lc-field="currency"><?php echo $hasLcDetails ? e($lcCurrency) : '—'; ?></dd>
+                        </div>
+                        <div class="col">
                             <dt class="text-uppercase text-muted">Amount</dt>
-                            <dd class="fw-semibold mb-0" data-lc-field="lc_amount">$<?php echo $hasLcDetails ? e($lcAmountFormatted) : '0.00'; ?></dd>
+                            <dd class="fw-semibold mb-0" data-lc-field="lc_amount"><?php echo $hasLcDetails ? e($lcAmountDisplay) : e($lcCurrencySymbol . '0.00'); ?></dd>
                         </div>
                         <div class="col">
                             <dt class="text-uppercase text-muted">Latest Shipment</dt>
