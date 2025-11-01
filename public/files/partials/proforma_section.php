@@ -76,18 +76,23 @@
         foreach ($lines as $index => $line) {
             $quantity = $line['quantity'];
             $fobTotal = $line['fob_total'];
-            $itemWeight = $line['item_weight'];
-            $freightPerUnit = $itemWeight * $freightPerWeight;
+            $lineWeight = $line['line_weight'];
+
             $fobPerUnit = $quantity > 0 ? $fobTotal / $quantity : 0.0;
-            $freightShare = $freightPerUnit * $quantity;
-            $cnfPerUnit = $freightPerUnit + $fobPerUnit;
-            $cnfTotal = $cnfPerUnit * $quantity;
+            $fobPerWeight = $lineWeight > 0 ? $fobTotal / $lineWeight : 0.0;
+            $freightPerWeightShare = $freightPerWeight;
+            $freightShare = $freightPerWeightShare * $lineWeight;
+            $cnfPerWeight = $freightPerWeightShare + $fobPerWeight;
+            $cnfTotal = $cnfPerWeight * $lineWeight;
+            $cnfPerUnit = $quantity > 0 ? $cnfTotal / $quantity : 0.0;
             $totalCnf += $cnfTotal;
 
-            $lines[$index]['freight_per_unit'] = $freightPerUnit;
+            $lines[$index]['freight_per_weight'] = $freightPerWeightShare;
+            $lines[$index]['fob_per_weight'] = $fobPerWeight;
             $lines[$index]['freight_share'] = $freightShare;
             $lines[$index]['fob_per_unit'] = $fobPerUnit;
             $lines[$index]['cnf_per_unit'] = $cnfPerUnit;
+            $lines[$index]['cnf_per_weight'] = $cnfPerWeight;
             $lines[$index]['cnf_total'] = $cnfTotal;
         }
 
@@ -224,9 +229,11 @@
                                 $quantityDisplay = rtrim(rtrim(number_format($line['quantity'], 3, '.', ''), '0'), '.') ?: '0';
                                 $fobDisplay = number_format($line['fob_total'], 2);
                                 $fobPerUnitDisplay = number_format($line['fob_per_unit'] ?? 0, 2);
-                                $freightPerUnitDisplay = number_format($line['freight_per_unit'] ?? 0, 2);
+                                $fobPerWeightDisplay = number_format($line['fob_per_weight'] ?? 0, 2);
+                                $freightPerWeightDisplay = number_format($line['freight_per_weight'] ?? 0, 2);
                                 $freightShareDisplay = number_format($line['freight_share'] ?? 0, 2);
                                 $cnfPerUnitDisplay = number_format($line['cnf_per_unit'] ?? 0, 2);
+                                $cnfPerWeightDisplay = number_format($line['cnf_per_weight'] ?? 0, 2);
                                 $cnfTotalDisplay = number_format($line['cnf_total'] ?? 0, 2);
                                 $lineWeightDisplay = rtrim(rtrim(number_format($line['line_weight'], 3, '.', ''), '0'), '.') ?: '0';
                                 ?>
@@ -265,7 +272,8 @@
                                     </td>
                                     <td class="text-end">
                                         <div class="fw-semibold">C&amp;F Total $<?php echo e($cnfTotalDisplay); ?></div>
-                                        <div class="text-muted small">Per Unit $<?php echo e($cnfPerUnitDisplay); ?> (FOB $<?php echo e($fobPerUnitDisplay); ?> + Freight $<?php echo e($freightPerUnitDisplay); ?>)</div>
+                                        <div class="text-muted small">Per Weight $<?php echo e($cnfPerWeightDisplay); ?> (FOB $<?php echo e($fobPerWeightDisplay); ?> + Freight $<?php echo e($freightPerWeightDisplay); ?>)</div>
+                                        <div class="text-muted small">Per Unit $<?php echo e($cnfPerUnitDisplay); ?></div>
                                         <div class="text-muted small">Freight Share $<?php echo e($freightShareDisplay); ?></div>
                                     </td>
                                 </tr>
