@@ -645,23 +645,26 @@ document.addEventListener('DOMContentLoaded', () => {
         const file = state.file || {};
         let totalAssesValue = 0;
         let totalCnf = 0;
+        let totalQuantity = 0;
 
         const rows = metrics.lines.map((line, index) => {
             const quantity = line.quantity;
             const assesUnit = parseNumber(line.product.asses_unit_price);
             const assesValue = assesUnit * quantity;
             const cnfTotal = line.cnfTotal || 0;
-            const percentChange = assesValue > 0 ? ((cnfTotal - assesValue) / assesValue) * 100 : 0;
+            const cnfPerUnit = line.cnfPerUnit || 0;
+            const percentChange = assesUnit > 0 ? ((cnfPerUnit - assesUnit) / assesUnit) * 100 : 0;
 
             totalAssesValue += assesValue;
             totalCnf += cnfTotal;
+            totalQuantity += quantity;
 
             return `
                 <tr>
                     <td class="text-center">${index + 1}</td>
                     <td>${escapeHtml(line.product.product_name || '')}</td>
-                    <td class="text-end">$${toCurrency(assesValue)}</td>
-                    <td class="text-end">$${toCurrency(cnfTotal)}</td>
+                    <td class="text-end">$${toCurrency(assesUnit)}</td>
+                    <td class="text-end">$${toCurrency(cnfPerUnit)}</td>
                     <td class="text-end">${formatPercent(percentChange)}</td>
                 </tr>
             `;
@@ -671,7 +674,9 @@ document.addEventListener('DOMContentLoaded', () => {
             </tr>
         `;
 
-        const totalPercent = totalAssesValue > 0 ? ((totalCnf - totalAssesValue) / totalAssesValue) * 100 : 0;
+        const averageAssesUnit = totalQuantity > 0 ? totalAssesValue / totalQuantity : 0;
+        const averageCnfUnit = totalQuantity > 0 ? totalCnf / totalQuantity : 0;
+        const totalPercent = averageAssesUnit > 0 ? ((averageCnfUnit - averageAssesUnit) / averageAssesUnit) * 100 : 0;
 
         return `
             ${renderPrintHeader('C&amp;F Calculation Summary', proforma, file)}
@@ -680,22 +685,22 @@ document.addEventListener('DOMContentLoaded', () => {
                     <tr>
                         <th class="text-center" style="width: 8%">Serial No</th>
                         <th>Product Name</th>
-                        <th class="text-end" style="width: 18%">Asses Value</th>
-                        <th class="text-end" style="width: 18%">Calculated C&amp;F</th>
+                        <th class="text-end" style="width: 18%">Asses Value (Per Unit)</th>
+                        <th class="text-end" style="width: 18%">Calculated C&amp;F (Per Unit)</th>
                         <th class="text-end" style="width: 18%">% Change</th>
                     </tr>
                 </thead>
                 <tbody>${rows}</tbody>
                 <tfoot>
                     <tr>
-                        <td colspan="2" class="text-end">Totals</td>
-                        <td class="text-end">$${toCurrency(totalAssesValue)}</td>
-                        <td class="text-end">$${toCurrency(totalCnf)}</td>
+                        <td colspan="2" class="text-end">Averages</td>
+                        <td class="text-end">$${toCurrency(averageAssesUnit)}</td>
+                        <td class="text-end">$${toCurrency(averageCnfUnit)}</td>
                         <td class="text-end">${formatPercent(totalPercent)}</td>
                     </tr>
                 </tfoot>
             </table>
-            <div class="muted">Percentage change compares calculated C&amp;F totals against assessed values.</div>
+            <div class="muted">Percentage change compares calculated C&amp;F per-unit values against assessed per-unit amounts.</div>
         `;
     };
 
@@ -1249,10 +1254,10 @@ document.addEventListener('DOMContentLoaded', () => {
             </td>
             <td class="text-end">
                 <div class="fw-semibold">C&amp;F Total $${escapeHtml(cnfTotalDisplay)}</div>
-            
-
-                <div class="text-muted small">C&amp;F Per Unit $${escapeHtml(cnfPerWeightDisplay)} </div>
-            
+                <div class="text-muted small">Calc: ${escapeHtml(cnfCalcExpression)}</div>
+                <div class="text-muted small">Details: ${escapeHtml(cnfCalcComponents)}</div>
+                <div class="text-muted small">Per Weight $${escapeHtml(cnfPerWeightDisplay)} (FOB $${escapeHtml(fobPerWeightDisplay)} + Freight $${escapeHtml(freightPerWeightDisplay)})</div>
+                <div class="text-muted small">Per Unit $${escapeHtml(cnfPerUnitDisplay)}</div>
             </td>
         `;
         return row;
