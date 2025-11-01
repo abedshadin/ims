@@ -663,7 +663,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 <tr>
                     <td class="text-center">${index + 1}</td>
                     <td>${escapeHtml(line.product.product_name || '')}</td>
-                    <td class="text-end">$${toCurrency(assesUnit)}</td>
+                    <td class="text-end">$${toCurrency(assesValue)}</td>
                     <td class="text-end">$${toCurrency(cnfPerUnit)}</td>
                     <td class="text-end">${formatPercent(percentChange)}</td>
                 </tr>
@@ -687,7 +687,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     <tr>
                         <th class="text-center" style="width: 8%">Serial No</th>
                         <th>Product Name</th>
-                        <th class="text-end" style="width: 18%">Asses Value Per Unit</th>
+                        <th class="text-end" style="width: 18%">Asses Value</th>
                         <th class="text-end" style="width: 18%">C&amp;F Per Unit</th>
                         <th class="text-end" style="width: 18%">% Change</th>
                     </tr>
@@ -696,13 +696,13 @@ document.addEventListener('DOMContentLoaded', () => {
                 <tfoot>
                     <tr>
                         <td colspan="2" class="text-end">Totals</td>
-                        <td class="text-end">$${toCurrency(totalAssesPerUnit)}</td>
+                        <td class="text-end">$${toCurrency(totalAssesValue)}</td>
                         <td class="text-end">$${toCurrency(totalCnfPerUnit)}</td>
                         <td class="text-end">${formatPercent(totalPercent)}</td>
                     </tr>
                 </tfoot>
             </table>
-            <div class="muted">Percentage change compares calculated C&amp;F per unit against assessed values per unit.</div>
+            <div class="muted">Percentage change compares calculated C&amp;F per unit against assessed values per unit; assessed value column displays total assessed amounts.</div>
         `;
     };
 
