@@ -645,23 +645,26 @@ document.addEventListener('DOMContentLoaded', () => {
         const file = state.file || {};
         let totalAssesValue = 0;
         let totalCnf = 0;
+        let totalQuantity = 0;
 
         const rows = metrics.lines.map((line, index) => {
             const quantity = line.quantity;
             const assesUnit = parseNumber(line.product.asses_unit_price);
             const assesValue = assesUnit * quantity;
             const cnfTotal = line.cnfTotal || 0;
-            const percentChange = assesValue > 0 ? ((cnfTotal - assesValue) / assesValue) * 100 : 0;
+            const cnfPerUnit = quantity > 0 ? cnfTotal / quantity : 0;
+            const percentChange = assesUnit > 0 ? ((cnfPerUnit - assesUnit) / assesUnit) * 100 : 0;
 
             totalAssesValue += assesValue;
             totalCnf += cnfTotal;
+            totalQuantity += quantity;
 
             return `
                 <tr>
                     <td class="text-center">${index + 1}</td>
                     <td>${escapeHtml(line.product.product_name || '')}</td>
                     <td class="text-end">$${toCurrency(assesValue)}</td>
-                    <td class="text-end">$${toCurrency(cnfTotal)}</td>
+                    <td class="text-end">$${toCurrency(cnfPerUnit)}</td>
                     <td class="text-end">${formatPercent(percentChange)}</td>
                 </tr>
             `;
@@ -671,7 +674,11 @@ document.addEventListener('DOMContentLoaded', () => {
             </tr>
         `;
 
-        const totalPercent = totalAssesValue > 0 ? ((totalCnf - totalAssesValue) / totalAssesValue) * 100 : 0;
+        const totalAssesPerUnit = totalQuantity > 0 ? totalAssesValue / totalQuantity : 0;
+        const totalCnfPerUnit = totalQuantity > 0 ? totalCnf / totalQuantity : 0;
+        const totalPercent = totalAssesPerUnit > 0
+            ? ((totalCnfPerUnit - totalAssesPerUnit) / totalAssesPerUnit) * 100
+            : 0;
 
         return `
             ${renderPrintHeader('C&amp;F Calculation Summary', proforma, file)}
@@ -681,7 +688,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         <th class="text-center" style="width: 8%">Serial No</th>
                         <th>Product Name</th>
                         <th class="text-end" style="width: 18%">Asses Value</th>
-                        <th class="text-end" style="width: 18%">Calculated C&amp;F</th>
+                        <th class="text-end" style="width: 18%">C&amp;F Per Unit</th>
                         <th class="text-end" style="width: 18%">% Change</th>
                     </tr>
                 </thead>
@@ -690,12 +697,12 @@ document.addEventListener('DOMContentLoaded', () => {
                     <tr>
                         <td colspan="2" class="text-end">Totals</td>
                         <td class="text-end">$${toCurrency(totalAssesValue)}</td>
-                        <td class="text-end">$${toCurrency(totalCnf)}</td>
+                        <td class="text-end">$${toCurrency(totalCnfPerUnit)}</td>
                         <td class="text-end">${formatPercent(totalPercent)}</td>
                     </tr>
                 </tfoot>
             </table>
-            <div class="muted">Percentage change compares calculated C&amp;F totals against assessed values.</div>
+            <div class="muted">Percentage change compares calculated C&amp;F per unit against assessed values per unit; assessed value column displays total assessed amounts.</div>
         `;
     };
 
