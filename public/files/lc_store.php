@@ -34,6 +34,7 @@ $input = [
     'lc_number' => isset($_POST['lc_number']) ? trim((string) $_POST['lc_number']) : '',
     'lc_date' => isset($_POST['lc_date']) ? trim((string) $_POST['lc_date']) : '',
     'lc_type' => isset($_POST['lc_type']) ? trim((string) $_POST['lc_type']) : '',
+    'currency' => isset($_POST['currency']) ? strtoupper(trim((string) $_POST['currency'])) : '',
     'subject_line' => isset($_POST['subject_line']) ? trim((string) $_POST['subject_line']) : '',
     'lc_amount' => isset($_POST['lc_amount']) ? trim((string) $_POST['lc_amount']) : '',
     'latest_shipment_date' => isset($_POST['latest_shipment_date']) ? trim((string) $_POST['latest_shipment_date']) : '',
@@ -64,6 +65,10 @@ if ($input['lc_number'] === '') {
 
 if ($input['lc_type'] === '') {
     $errors['lc_type'] = 'LC type is required.';
+}
+
+if ($input['currency'] === '' || !in_array($input['currency'], ['USD', 'EURO'], true)) {
+    $errors['currency'] = 'Please select a valid currency.';
 }
 
 if ($input['subject_line'] !== '' && strlen($input['subject_line']) > 255) {
@@ -125,6 +130,7 @@ try {
              SET lc_number = :lc_number,
                  lc_date = :lc_date,
                  lc_type = :lc_type,
+                 currency = :currency,
                  subject_line = :subject_line,
                  lc_amount = :lc_amount,
                  latest_shipment_date = :latest_shipment_date,
@@ -138,6 +144,7 @@ try {
             ':lc_number' => $input['lc_number'],
             ':lc_date' => $parsedLcDate->format('Y-m-d'),
             ':lc_type' => $input['lc_type'],
+            ':currency' => $input['currency'],
             ':subject_line' => $input['subject_line'],
             ':lc_amount' => number_format((float) $input['lc_amount'], 2, '.', ''),
             ':latest_shipment_date' => $parsedShipmentDate->format('Y-m-d'),
@@ -148,9 +155,9 @@ try {
     } else {
         $insertStatement = $pdo->prepare(
             'INSERT INTO file_letters_of_credit (
-                vendor_file_id, lc_number, lc_date, lc_type, subject_line, lc_amount, latest_shipment_date, expiry_date, created_at, created_by
+                vendor_file_id, lc_number, lc_date, lc_type, currency, subject_line, lc_amount, latest_shipment_date, expiry_date, created_at, created_by
             ) VALUES (
-                :file_id, :lc_number, :lc_date, :lc_type, :subject_line, :lc_amount, :latest_shipment_date, :expiry_date, NOW(), :created_by
+                :file_id, :lc_number, :lc_date, :lc_type, :currency, :subject_line, :lc_amount, :latest_shipment_date, :expiry_date, NOW(), :created_by
             )'
         );
 
@@ -159,6 +166,7 @@ try {
             ':lc_number' => $input['lc_number'],
             ':lc_date' => $parsedLcDate->format('Y-m-d'),
             ':lc_type' => $input['lc_type'],
+            ':currency' => $input['currency'],
             ':subject_line' => $input['subject_line'],
             ':lc_amount' => number_format((float) $input['lc_amount'], 2, '.', ''),
             ':latest_shipment_date' => $parsedShipmentDate->format('Y-m-d'),

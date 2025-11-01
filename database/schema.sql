@@ -118,6 +118,7 @@ CREATE TABLE IF NOT EXISTS file_letters_of_credit (
     lc_number VARCHAR(100) NOT NULL,
     lc_date DATE NOT NULL,
     lc_type VARCHAR(100) NOT NULL,
+    currency ENUM('USD', 'EURO') NOT NULL DEFAULT 'USD',
     subject_line VARCHAR(255) NOT NULL DEFAULT '',
     lc_amount DECIMAL(15, 2) NOT NULL DEFAULT 0.00,
     latest_shipment_date DATE NOT NULL,

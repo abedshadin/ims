@@ -7,7 +7,7 @@ final class FileLcDetails
     public static function load(PDO $pdo, int $fileId): ?array
     {
         $statement = $pdo->prepare(
-            'SELECT id, vendor_file_id, lc_number, lc_date, lc_type, subject_line, lc_amount, latest_shipment_date, expiry_date, created_at, updated_at, created_by, updated_by
+            'SELECT id, vendor_file_id, lc_number, lc_date, lc_type, currency, subject_line, lc_amount, latest_shipment_date, expiry_date, created_at, updated_at, created_by, updated_by
              FROM file_letters_of_credit
              WHERE vendor_file_id = :file_id
              LIMIT 1'
@@ -36,6 +36,7 @@ final class FileLcDetails
             'vendor_file_id' => isset($row['vendor_file_id']) ? (int) $row['vendor_file_id'] : null,
             'lc_number' => (string) ($row['lc_number'] ?? ''),
             'lc_type' => (string) ($row['lc_type'] ?? ''),
+            'currency' => self::normaliseCurrency($row['currency'] ?? null),
             'subject_line' => (string) ($row['subject_line'] ?? ''),
             'lc_amount' => $lcAmount['value'],
             'lc_amount_formatted' => $lcAmount['formatted'],
@@ -50,6 +51,13 @@ final class FileLcDetails
             'created_by' => isset($row['created_by']) && $row['created_by'] !== null ? (int) $row['created_by'] : null,
             'updated_by' => isset($row['updated_by']) && $row['updated_by'] !== null ? (int) $row['updated_by'] : null,
         ];
+    }
+
+    private static function normaliseCurrency(mixed $value): string
+    {
+        $currency = strtoupper((string) $value);
+
+        return in_array($currency, ['USD', 'EURO'], true) ? $currency : 'USD';
     }
 
     private static function normaliseNumber(mixed $value): array
