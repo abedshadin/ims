@@ -1930,21 +1930,34 @@ const initialiseWorkspace = () => {
 
         const manualFields = newProductFields.querySelectorAll('input, select');
 
+        const setManualFieldRequirement = (isRequired) => {
+            manualFields.forEach((field) => {
+                field.required = isRequired;
+
+                if (!isRequired) {
+                    field.value = '';
+                }
+            });
+        };
+
         if (mode === 'new') {
             existingProductFields.classList.add('d-none');
             newProductFields.classList.remove('d-none');
-            vendorProductSelect.required = false;
-            manualFields.forEach((field) => {
-                field.required = true;
-            });
+
+            if (vendorProductSelect) {
+                vendorProductSelect.required = false;
+            }
+
+            setManualFieldRequirement(true);
         } else {
             existingProductFields.classList.remove('d-none');
             newProductFields.classList.add('d-none');
-            vendorProductSelect.required = true;
-            manualFields.forEach((field) => {
-                field.required = false;
-                field.value = '';
-            });
+
+            if (vendorProductSelect) {
+                vendorProductSelect.required = true;
+            }
+
+            setManualFieldRequirement(false);
         }
     };
 
