@@ -1883,7 +1883,76 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     };
 
+    const resolvePiToken = (element) => {
+        if (!element) {
+            return '';
+        }
+
+        const directToken = element.getAttribute('data-pi-token') || '';
+
+        if (directToken) {
+            return directToken;
+        }
+
+        const container = element.closest('[data-pi-token]');
+
+        return container ? container.getAttribute('data-pi-token') || '' : '';
+    };
+
+    const resolveCiToken = (element) => {
+        if (!element) {
+            return '';
+        }
+
+        const directToken = element.getAttribute('data-ci-token') || '';
+
+        if (directToken) {
+            return directToken;
+        }
+
+        const container = element.closest('[data-ci-token]');
+
+        return container ? container.getAttribute('data-ci-token') || '' : '';
+    };
+
+    const handleAddProductAction = (button) => {
+        const piToken = resolvePiToken(button);
+        const ciToken = resolveCiToken(button);
+        const isCommercialContext = ciToken !== '' || (ciList && ciList.contains(button));
+        const targetAlert = isCommercialContext ? ciAlert : piAlert;
+
+        if (isCommercialContext && ciToken === '') {
+            showAlert(targetAlert, 'Unable to determine the selected commercial invoice.', 'danger');
+            return;
+        }
+
+        if (piToken === '') {
+            const message = isCommercialContext
+                ? 'The linked proforma invoice could not be determined.'
+                : 'Select a proforma invoice before adding products.';
+            showAlert(targetAlert, message, 'danger');
+            return;
+        }
+
+        openProductModal({ piToken, ciToken });
+    };
+
     const attachEventListeners = () => {
+        document.addEventListener('click', (event) => {
+            const actionButton = event.target.closest('[data-action]');
+
+            if (!actionButton) {
+                return;
+            }
+
+            const action = actionButton.getAttribute('data-action');
+
+            if (action === 'add-product') {
+                event.preventDefault();
+                handleAddProductAction(actionButton);
+            }
+        });
+
         if (lcCurrencySelect) {
             lcCurrencySelect.addEventListener('change', () => {
                 const currentCurrency = lcCurrencySelect.value || lcCurrencySelect.dataset.defaultValue || 'USD';
@@ -2281,11 +2350,6 @@ document.addEventListener('DOMContentLoaded', () => {
                         showAlert(piAlert, 'Preview blocked. Please allow new tabs for this site to open the document.', 'warning');
                     }
 
-                    return;
-                }
-
-                if (action === 'add-product') {
-                    openProductModal({ piToken });
                     return;
                 }
 
