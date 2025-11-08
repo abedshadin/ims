@@ -188,6 +188,13 @@ document.addEventListener('DOMContentLoaded', () => {
     const piProductRemoveAlert = document.getElementById('piProductRemoveAlert');
     const productPreview = document.getElementById('vendorProductPreview');
     const previewFields = productPreview ? productPreview.querySelectorAll('[data-preview]') : [];
+    const ciTokenInput = document.getElementById('ci_token');
+    const productModalTitle = productModalElement
+        ? productModalElement.querySelector('[data-product-modal-title]')
+        : null;
+    const piOnlySections = productModalElement
+        ? productModalElement.querySelectorAll('[data-pi-only]')
+        : [];
     const fileMetaCreated = document.getElementById('fileMetaCreated');
     const fileMetaUpdated = document.getElementById('fileMetaUpdated');
     const lcForm = document.getElementById('lcForm');
@@ -200,7 +207,9 @@ document.addEventListener('DOMContentLoaded', () => {
     const insuranceAlert = document.getElementById('insuranceAlert');
     const insuranceSummary = document.getElementById('insuranceSummary');
     const insuranceEmptyMessage = insuranceSummary ? insuranceSummary.querySelector('[data-insurance-empty-message]') : null;
-    let activePiToken = null;
+    let activePiToken = '';
+    let activeCiToken = '';
+    let productModalContext = 'pi';
     let productModalInstance = null;
 
     const escapeHtml = (value) => {
@@ -1281,6 +1290,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const proformaNumber = invoice.proforma && invoice.proforma.invoice_number
             ? `PI ${invoice.proforma.invoice_number}`
             : '';
+        const proformaToken = invoice.proforma && invoice.proforma.token ? invoice.proforma.token : '';
         const productRows = (invoice.products || [])
             .filter((product) => product && product.token)
             .map((product) => {
@@ -1352,6 +1362,11 @@ document.addEventListener('DOMContentLoaded', () => {
                         </div>
                         <p class="text-muted small mb-0">Created ${escapeHtml(createdAt)}</p>
                     </div>
+                    ${proformaToken
+                        ? `<div class="workspace-ci-actions d-flex flex-column flex-sm-row flex-wrap gap-2 w-100 w-xl-auto justify-content-xl-end">
+                                <button class="btn btn-primary flex-fill" type="button" data-action="add-product" data-ci-token="${escapeHtml(invoice.token || '')}" data-pi-token="${escapeHtml(proformaToken)}">Add Product</button>
+                            </div>`
+                        : ''}
                 </div>
             </div>
             <div class="card-body pt-4" data-ci-container>
@@ -1779,25 +1794,59 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     };
 
-    const openProductModal = (piToken) => {
+    const openProductModal = ({ piToken, ciToken = '' }) => {
         if (!productForm || !productModalElement) {
             return;
         }
 
-        activePiToken = piToken;
+        activePiToken = piToken || '';
+        activeCiToken = ciToken || '';
+        productModalContext = activeCiToken ? 'ci' : 'pi';
         productForm.reset();
         resetAlert(productAlertBox);
         resetAlert(piProductRemoveAlert);
 
         const piTokenInput = productForm.querySelector('#pi_token');
         if (piTokenInput) {
-            piTokenInput.value = piToken;
+            piTokenInput.value = activePiToken;
+        }
+
+        if (ciTokenInput) {
+            ciTokenInput.value = activeCiToken;
+        }
+
+        if (productModalTitle) {
+            productModalTitle.textContent = productModalContext === 'ci'
+                ? 'Add Products to Commercial Invoice'
+                : 'Add Products to Proforma Invoice';
         }
 
         populateVendorProductSelect();
         updateProductPreview();
         toggleProductMode();
-        populatePiProductRemovalOptions(piToken);
+
+        if (piOnlySections.length) {
+            piOnlySections.forEach((section) => {
+                if (productModalContext === 'ci') {
+                    section.classList.add('d-none');
+                } else {
+                    section.classList.remove('d-none');
+                }
+            });
+        }
+
+        if (productModalContext === 'pi') {
+            populatePiProductRemovalOptions(activePiToken);
+        } else {
+            if (piProductSelect) {
+                piProductSelect.value = '';
+                piProductSelect.disabled = true;
+            }
+
+            if (piProductRemoveButton) {
+                piProductRemoveButton.disabled = true;
+            }
+        }
 
         if (!productModalInstance) {
             productModalInstance = new bootstrap.Modal(productModalElement);
@@ -1834,7 +1883,76 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     };
 
+    const resolvePiToken = (element) => {
+        if (!element) {
+            return '';
+        }
+
+        const directToken = element.getAttribute('data-pi-token') || '';
+
+        if (directToken) {
+            return directToken;
+        }
+
+        const container = element.closest('[data-pi-token]');
+
+        return container ? container.getAttribute('data-pi-token') || '' : '';
+    };
+
+    const resolveCiToken = (element) => {
+        if (!element) {
+            return '';
+        }
+
+        const directToken = element.getAttribute('data-ci-token') || '';
+
+        if (directToken) {
+            return directToken;
+        }
+
+        const container = element.closest('[data-ci-token]');
+
+        return container ? container.getAttribute('data-ci-token') || '' : '';
+    };
+
+    const handleAddProductAction = (button) => {
+        const piToken = resolvePiToken(button);
+        const ciToken = resolveCiToken(button);
+        const isCommercialContext = ciToken !== '' || (ciList && ciList.contains(button));
+        const targetAlert = isCommercialContext ? ciAlert : piAlert;
+
+        if (isCommercialContext && ciToken === '') {
+            showAlert(targetAlert, 'Unable to determine the selected commercial invoice.', 'danger');
+            return;
+        }
+
+        if (piToken === '') {
+            const message = isCommercialContext
+                ? 'The linked proforma invoice could not be determined.'
+                : 'Select a proforma invoice before adding products.';
+            showAlert(targetAlert, message, 'danger');
+            return;
+        }
+
+        openProductModal({ piToken, ciToken });
+    };
+
     const attachEventListeners = () => {
+        document.addEventListener('click', (event) => {
+            const actionButton = event.target.closest('[data-action]');
+
+            if (!actionButton) {
+                return;
+            }
+
+            const action = actionButton.getAttribute('data-action');
+
+            if (action === 'add-product') {
+                event.preventDefault();
+                handleAddProductAction(actionButton);
+            }
+        });
+
         if (lcCurrencySelect) {
             lcCurrencySelect.addEventListener('change', () => {
                 const currentCurrency = lcCurrencySelect.value || lcCurrencySelect.dataset.defaultValue || 'USD';
@@ -2206,11 +2324,6 @@ document.addEventListener('DOMContentLoaded', () => {
                     return;
                 }
 
-                if (action === 'add-product') {
-                    openProductModal(piToken);
-                    return;
-                }
-
                 if (action === 'save-freight') {
                     const card = actionButton.closest('.card[data-pi-token]');
                     const input = card ? card.querySelector('[data-freight-input]') : null;
@@ -2409,7 +2522,18 @@ document.addEventListener('DOMContentLoaded', () => {
 
                     formData.set('pi_token', activePiToken);
 
-                    const response = await fetch('proforma_products_store.php', {
+                    let endpoint = 'proforma_products_store.php';
+
+                    if (productModalContext === 'ci') {
+                        if (!activeCiToken) {
+                            throw new Error('Select a commercial invoice before adding products.');
+                        }
+
+                        formData.set('ci_token', activeCiToken);
+                        endpoint = 'commercial_products_store.php';
+                    }
+
+                    const response = await fetch(endpoint, {
                         method: 'POST',
                         body: formData,
                     });
@@ -2442,17 +2566,37 @@ document.addEventListener('DOMContentLoaded', () => {
                         pi.products.push(result.product);
                     }
 
-                    refreshPiList();
+                    if (productModalContext === 'ci' && result.invoice) {
+                        const updatedInvoice = normaliseCommercialInvoice(result.invoice);
+                        if (updatedInvoice) {
+                            const index = state.commercialInvoices.findIndex((item) => item.token === updatedInvoice.token);
+                            if (index >= 0) {
+                                state.commercialInvoices[index] = updatedInvoice;
+                            } else {
+                                state.commercialInvoices.unshift(updatedInvoice);
+                            }
+                        }
+                    }
 
                     if (result.file_meta) {
                         updateFileMeta(result.file_meta);
                     }
 
+                    if (productModalContext === 'ci') {
+                        refreshCiList();
+                    }
+
+                    refreshPiList();
+
                     if (productModalInstance) {
                         productModalInstance.hide();
                     }
 
-                    showAlert(piAlert, result.message || 'Product added.', 'success');
+                    if (productModalContext === 'ci') {
+                        showAlert(ciAlert, result.message || 'Product added.', 'success');
+                    } else {
+                        showAlert(piAlert, result.message || 'Product added.', 'success');
+                    }
                 } catch (error) {
                     showAlert(productAlertBox, error.message, 'danger');
                 } finally {
