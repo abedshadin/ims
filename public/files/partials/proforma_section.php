@@ -41,6 +41,7 @@
 </div>
 
 <div id="piList" class="row gy-4 mb-4">
+    <?php $proformas = is_array($proformas ?? null) ? $proformas : []; ?>
     <?php foreach ($proformas as $proforma): ?>
         <?php
         $piToken = (string) ($proforma['token'] ?? '');
