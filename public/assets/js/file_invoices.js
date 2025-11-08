@@ -2017,7 +2017,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
     const attachEventListeners = () => {
         document.addEventListener('click', (event) => {
-            const actionButton = event.target.closest('[data-action]');
+            const target = event.target instanceof Element ? event.target : null;
+            const actionButton = target ? target.closest('[data-action]') : null;
 
             if (!actionButton) {
                 return;
@@ -2270,7 +2271,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
         if (ciList) {
             ciList.addEventListener('submit', async (event) => {
-                const form = event.target.closest('form[data-ci-form]');
+                const target = event.target instanceof Element ? event.target : null;
+                const form = target ? target.closest('form[data-ci-form]') : null;
 
                 if (!form) {
                     return;
@@ -2356,7 +2358,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
         if (piList) {
             piList.addEventListener('click', async (event) => {
-                const actionButton = event.target.closest('[data-action]');
+                const target = event.target instanceof Element ? event.target : null;
+                const actionButton = target ? target.closest('[data-action]') : null;
 
                 if (!actionButton) {
                     return;
