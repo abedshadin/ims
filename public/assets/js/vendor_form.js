@@ -19,7 +19,9 @@ document.addEventListener('DOMContentLoaded', () => {
     form.addEventListener('submit', async (event) => {
         event.preventDefault();
 
-        const submitButton = form.querySelector('[type="submit"]');
+        const submitButton = form.querySelector(
+            'button[type="submit"], input[type="submit"], button:not([type])'
+        );
         const formData = new FormData(form);
         const endpoint = form.dataset.endpoint || form.getAttribute('action') || 'store.php';
         const redirectTarget = form.dataset.redirect || '';

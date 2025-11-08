@@ -19,7 +19,9 @@ document.addEventListener('DOMContentLoaded', () => {
     form.addEventListener('submit', async (event) => {
         event.preventDefault();
 
-        const submitButton = form.querySelector('[type="submit"]');
+        const submitButton = form.querySelector(
+            'button[type="submit"], input[type="submit"], button:not([type])'
+        );
         const endpoint = form.dataset.endpoint || form.getAttribute('action') || 'products_store.php';
         const redirectTarget = form.dataset.redirect || '';
         const resetOnSuccess = form.dataset.resetOnSuccess !== 'false';
@@ -36,7 +38,9 @@ document.addEventListener('DOMContentLoaded', () => {
         form.classList.remove('was-validated');
 
         try {
-            submitButton.disabled = true;
+            if (submitButton) {
+                submitButton.disabled = true;
+            }
 
             const response = await fetch(endpoint, {
                 method: 'POST',
@@ -74,7 +78,9 @@ document.addEventListener('DOMContentLoaded', () => {
         } catch (error) {
             showAlert(error.message, 'danger');
         } finally {
-            submitButton.disabled = false;
+            if (submitButton) {
+                submitButton.disabled = false;
+            }
         }
     });
 
