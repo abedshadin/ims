@@ -1,6 +1,6 @@
 /* global bootstrap */
 
-document.addEventListener('DOMContentLoaded', () => {
+const initialiseWorkspace = () => {
     const dataElement = document.getElementById('fileInvoicesData');
 
     if (!dataElement) {
@@ -198,6 +198,63 @@ document.addEventListener('DOMContentLoaded', () => {
     const fileMetaCreated = document.getElementById('fileMetaCreated');
     const fileMetaUpdated = document.getElementById('fileMetaUpdated');
     const lcForm = document.getElementById('lcForm');
+
+    let bootstrapModalPromise = null;
+
+    const ensureBootstrapModal = () => {
+        if (window.bootstrap && typeof window.bootstrap.Modal === 'function') {
+            return Promise.resolve(window.bootstrap.Modal);
+        }
+
+        if (bootstrapModalPromise) {
+            return bootstrapModalPromise;
+        }
+
+        bootstrapModalPromise = new Promise((resolve, reject) => {
+            const existing = document.querySelector('script[data-bootstrap-fallback="modal"]');
+            let script = existing instanceof HTMLScriptElement ? existing : null;
+
+            const cleanup = (loadHandler, errorHandler) => {
+                if (script) {
+                    script.removeEventListener('load', loadHandler);
+                    script.removeEventListener('error', errorHandler);
+                }
+            };
+
+            const handleLoad = () => {
+                cleanup(handleLoad, handleError);
+
+                if (window.bootstrap && typeof window.bootstrap.Modal === 'function') {
+                    resolve(window.bootstrap.Modal);
+                } else {
+                    reject(new Error('Bootstrap modal support failed to initialise.'));
+                }
+            };
+
+            const handleError = () => {
+                cleanup(handleLoad, handleError);
+                reject(new Error('Unable to load the resources required for modal dialogs.'));
+            };
+
+            if (!script) {
+                script = document.createElement('script');
+                script.src = 'https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js';
+                script.crossOrigin = 'anonymous';
+                script.integrity = 'sha384-YvpcrYf0tY3lHB60NNkmXc5s9fDVZLESaAA55NDzOxhy9GkcIdslK1eN7N6jIeHz';
+                script.async = true;
+                script.dataset.bootstrapFallback = 'modal';
+                document.head.append(script);
+            }
+
+            script.addEventListener('load', handleLoad);
+            script.addEventListener('error', handleError);
+        }).catch((error) => {
+            bootstrapModalPromise = null;
+            throw error;
+        });
+
+        return bootstrapModalPromise;
+    };
     const lcAlert = document.getElementById('lcAlert');
     const lcSummary = document.getElementById('lcSummary');
     const lcEmptyMessage = lcSummary ? lcSummary.querySelector('[data-lc-empty-message]') : null;
@@ -1848,8 +1905,16 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         }
 
+        const modalConstructor = window.bootstrap && typeof window.bootstrap.Modal === 'function'
+            ? window.bootstrap.Modal
+            : null;
+
+        if (!modalConstructor) {
+            throw new Error('Modal support is currently unavailable.');
+        }
+
         if (!productModalInstance) {
-            productModalInstance = new bootstrap.Modal(productModalElement);
+            productModalInstance = new modalConstructor(productModalElement);
         }
 
         productModalInstance.show();
@@ -1915,7 +1980,7 @@ document.addEventListener('DOMContentLoaded', () => {
         return container ? container.getAttribute('data-ci-token') || '' : '';
     };
 
-    const handleAddProductAction = (button) => {
+    const handleAddProductAction = async (button) => {
         const piToken = resolvePiToken(button);
         const ciToken = resolveCiToken(button);
         const isCommercialContext = ciToken !== '' || (ciList && ciList.contains(button));
@@ -1934,12 +1999,26 @@ document.addEventListener('DOMContentLoaded', () => {
             return;
         }
 
-        openProductModal({ piToken, ciToken });
+        try {
+            await ensureBootstrapModal();
+        } catch (error) {
+            console.error(error);
+            showAlert(targetAlert, error.message || 'Unable to load modal support for this action.', 'danger');
+            return;
+        }
+
+        try {
+            openProductModal({ piToken, ciToken });
+        } catch (error) {
+            console.error(error);
+            showAlert(targetAlert, error.message || 'Unable to open the product modal.', 'danger');
+        }
     };
 
     const attachEventListeners = () => {
         document.addEventListener('click', (event) => {
-            const actionButton = event.target.closest('[data-action]');
+            const target = event.target instanceof Element ? event.target : null;
+            const actionButton = target ? target.closest('[data-action]') : null;
 
             if (!actionButton) {
                 return;
@@ -1949,7 +2028,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
             if (action === 'add-product') {
                 event.preventDefault();
-                handleAddProductAction(actionButton);
+                Promise.resolve(handleAddProductAction(actionButton)).catch((error) => {
+                    console.error(error);
+                });
             }
         });
 
@@ -2189,37 +2270,9 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         if (ciList) {
-            ciList.addEventListener('click', (event) => {
-                const actionButton = event.target.closest('[data-action]');
-
-                if (!actionButton) {
-                    return;
-                }
-
-                const action = actionButton.getAttribute('data-action');
-
-                if (action !== 'add-product') {
-                    return;
-                }
-
-                const ciToken = actionButton.getAttribute('data-ci-token') || '';
-                const piToken = actionButton.getAttribute('data-pi-token') || '';
-
-                if (!ciToken) {
-                    showAlert(ciAlert, 'Unable to determine the selected commercial invoice.', 'danger');
-                    return;
-                }
-
-                if (!piToken) {
-                    showAlert(ciAlert, 'The linked proforma invoice could not be determined.', 'danger');
-                    return;
-                }
-
-                openProductModal({ piToken, ciToken });
-            });
-
             ciList.addEventListener('submit', async (event) => {
-                const form = event.target.closest('form[data-ci-form]');
+                const target = event.target instanceof Element ? event.target : null;
+                const form = target ? target.closest('form[data-ci-form]') : null;
 
                 if (!form) {
                     return;
@@ -2305,7 +2358,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
         if (piList) {
             piList.addEventListener('click', async (event) => {
-                const actionButton = event.target.closest('[data-action]');
+                const target = event.target instanceof Element ? event.target : null;
+                const actionButton = target ? target.closest('[data-action]') : null;
 
                 if (!actionButton) {
                     return;
@@ -2691,4 +2745,10 @@ document.addEventListener('DOMContentLoaded', () => {
     refreshCiList();
     refreshPiList();
     attachEventListeners();
-});
+};
+
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initialiseWorkspace);
+} else {
+    initialiseWorkspace();
+}
