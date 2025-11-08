@@ -22,10 +22,7 @@ function e(?string $value): string
 /**
  * @throws RuntimeException when the requested partial cannot be located.
  */
-/**
- * @param array<string, mixed> $scopedVariables
- */
-function includePartial(string $partial, array $scopedVariables = []): void
+function includePartial(string $partial): void
 {
     $partialName = ltrim($partial, '/');
 
@@ -38,14 +35,6 @@ function includePartial(string $partial, array $scopedVariables = []): void
     if (!is_file($partialPath)) {
         throw new RuntimeException(sprintf('Partial template "%s" was not found in the expected directory.', $partialName));
     }
-
-    if ($scopedVariables === []) {
-        $scopedVariables = $GLOBALS;
-    }
-
-    unset($scopedVariables['GLOBALS']);
-
-    extract($scopedVariables, EXTR_SKIP);
 
     include $partialPath;
 }
