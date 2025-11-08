@@ -1,6 +1,6 @@
 /* global bootstrap */
 
-document.addEventListener('DOMContentLoaded', () => {
+const initialiseWorkspace = () => {
     const dataElement = document.getElementById('fileInvoicesData');
 
     if (!dataElement) {
@@ -2745,4 +2745,10 @@ document.addEventListener('DOMContentLoaded', () => {
     refreshCiList();
     refreshPiList();
     attachEventListeners();
-});
+};
+
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initialiseWorkspace);
+} else {
+    initialiseWorkspace();
+}
