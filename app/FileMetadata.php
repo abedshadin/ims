@@ -50,12 +50,18 @@ final class FileMetadata
 
         $createdAtHuman = '';
         if ($createdAt !== '') {
-            $createdAtHuman = date('j M Y, g:i A', strtotime($createdAt));
+            $createdTimestamp = strtotime($createdAt);
+            if ($createdTimestamp !== false) {
+                $createdAtHuman = date('j M Y, g:i A', $createdTimestamp);
+            }
         }
 
         $updatedAtHuman = null;
         if ($updatedAt !== null && $updatedAt !== '') {
-            $updatedAtHuman = date('j M Y, g:i A', strtotime($updatedAt));
+            $updatedTimestamp = strtotime($updatedAt);
+            if ($updatedTimestamp !== false) {
+                $updatedAtHuman = date('j M Y, g:i A', $updatedTimestamp);
+            }
         }
 
         $token = null;
