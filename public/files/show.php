@@ -303,24 +303,13 @@ if ($file !== null) {
                         Proforma Invoices
                     </button>
                 </h2>
-                <div id="proformaCollapse" class="accordion-collapse collapse show" data-bs-parent="#fileWorkspaceAccordion">
+                <div id="proformaCollapse" class="accordion-collapse collapse" data-bs-parent="#fileWorkspaceAccordion">
                     <div class="accordion-body">
                         <?php include __DIR__ . '/partials/proforma_section.php'; ?>
                     </div>
                 </div>
             </div>
-            <div class="accordion-item">
-                <h2 class="accordion-header" id="commercialHeading">
-                    <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#commercialCollapse" aria-expanded="false" aria-controls="commercialCollapse">
-                        Commercial Invoices
-                    </button>
-                </h2>
-                <div id="commercialCollapse" class="accordion-collapse collapse" data-bs-parent="#fileWorkspaceAccordion">
-                    <div class="accordion-body">
-                        <?php include __DIR__ . '/partials/commercial_section.php'; ?>
-                    </div>
-                </div>
-            </div>
+
             <div class="accordion-item">
                 <h2 class="accordion-header" id="lcHeading">
                     <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#lcCollapse" aria-expanded="false" aria-controls="lcCollapse">
@@ -342,6 +331,19 @@ if ($file !== null) {
                 <div id="insuranceCollapse" class="accordion-collapse collapse" data-bs-parent="#fileWorkspaceAccordion">
                     <div class="accordion-body">
                         <?php include __DIR__ . '/partials/insurance_section.php'; ?>
+                    </div>
+                </div>
+            </div>
+
+                        <div class="accordion-item">
+                <h2 class="accordion-header" id="commercialHeading">
+                    <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#commercialCollapse" aria-expanded="false" aria-controls="commercialCollapse">
+                        Commercial Invoices
+                    </button>
+                </h2>
+                <div id="commercialCollapse" class="accordion-collapse collapse" data-bs-parent="#fileWorkspaceAccordion">
+                    <div class="accordion-body">
+                        <?php include __DIR__ . '/partials/commercial_section.php'; ?>
                     </div>
                 </div>
             </div>
