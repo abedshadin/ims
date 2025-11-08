@@ -19,6 +19,26 @@ function e(?string $value): string
     return htmlspecialchars((string) $value, ENT_QUOTES, 'UTF-8');
 }
 
+/**
+ * @throws RuntimeException when the requested partial cannot be located.
+ */
+function includePartial(string $partial): void
+{
+    $partialName = ltrim($partial, '/');
+
+    if ($partialName === '') {
+        throw new RuntimeException('A partial name must be provided when rendering the workspace view.');
+    }
+
+    $partialPath = __DIR__ . '/partials/' . $partialName;
+
+    if (!is_file($partialPath)) {
+        throw new RuntimeException(sprintf('Partial template "%s" was not found in the expected directory.', $partialName));
+    }
+
+    include $partialPath;
+}
+
 $currentUserName = Auth::userName();
 $fileToken = isset($_GET['file']) ? (string) $_GET['file'] : '';
 $fileId = $fileToken !== '' ? IdCipher::decode($fileToken) : null;
@@ -294,7 +314,7 @@ if ($file !== null) {
     <?php elseif ($file === null): ?>
         <div class="alert alert-warning" role="alert">We could not determine which file to load.</div>
     <?php else: ?>
-        <?php include __DIR__ . '/partials/file_header.php'; ?>
+        <?php includePartial('file_header.php'); ?>
 
         <div class="accordion" id="fileWorkspaceAccordion">
             <div class="accordion-item">
@@ -303,9 +323,9 @@ if ($file !== null) {
                         Proforma Invoices
                     </button>
                 </h2>
-                <div id="proformaCollapse" class="accordion-collapse collapse" data-bs-parent="#fileWorkspaceAccordion">
+                <div id="proformaCollapse" class="accordion-collapse collapse show" data-bs-parent="#fileWorkspaceAccordion">
                     <div class="accordion-body">
-                        <?php include __DIR__ . '/partials/proforma_section.php'; ?>
+                        <?php includePartial('proforma_section.php'); ?>
                     </div>
                 </div>
             </div>
@@ -318,7 +338,7 @@ if ($file !== null) {
                 </h2>
                 <div id="lcCollapse" class="accordion-collapse collapse" data-bs-parent="#fileWorkspaceAccordion">
                     <div class="accordion-body">
-                        <?php include __DIR__ . '/partials/lc_section.php'; ?>
+                        <?php includePartial('lc_section.php'); ?>
                     </div>
                 </div>
             </div>
@@ -330,7 +350,7 @@ if ($file !== null) {
                 </h2>
                 <div id="insuranceCollapse" class="accordion-collapse collapse" data-bs-parent="#fileWorkspaceAccordion">
                     <div class="accordion-body">
-                        <?php include __DIR__ . '/partials/insurance_section.php'; ?>
+                        <?php includePartial('insurance_section.php'); ?>
                     </div>
                 </div>
             </div>
@@ -343,13 +363,13 @@ if ($file !== null) {
                 </h2>
                 <div id="commercialCollapse" class="accordion-collapse collapse" data-bs-parent="#fileWorkspaceAccordion">
                     <div class="accordion-body">
-                        <?php include __DIR__ . '/partials/commercial_section.php'; ?>
+                        <?php includePartial('commercial_section.php'); ?>
                     </div>
                 </div>
             </div>
         </div>
 
-        <?php include __DIR__ . '/partials/product_modal.php'; ?>
+        <?php includePartial('product_modal.php'); ?>
     <?php endif; ?>
     </div>
 </div>
