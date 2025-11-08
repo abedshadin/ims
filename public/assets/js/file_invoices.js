@@ -2269,35 +2269,6 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         if (ciList) {
-            ciList.addEventListener('click', (event) => {
-                const actionButton = event.target.closest('[data-action]');
-
-                if (!actionButton) {
-                    return;
-                }
-
-                const action = actionButton.getAttribute('data-action');
-
-                if (action !== 'add-product') {
-                    return;
-                }
-
-                const ciToken = actionButton.getAttribute('data-ci-token') || '';
-                const piToken = actionButton.getAttribute('data-pi-token') || '';
-
-                if (!ciToken) {
-                    showAlert(ciAlert, 'Unable to determine the selected commercial invoice.', 'danger');
-                    return;
-                }
-
-                if (!piToken) {
-                    showAlert(ciAlert, 'The linked proforma invoice could not be determined.', 'danger');
-                    return;
-                }
-
-                openProductModal({ piToken, ciToken });
-            });
-
             ciList.addEventListener('submit', async (event) => {
                 const form = event.target.closest('form[data-ci-form]');
 
