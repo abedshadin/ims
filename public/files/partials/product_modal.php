@@ -2,12 +2,13 @@
     <div class="modal-dialog modal-lg modal-dialog-scrollable">
         <div class="modal-content">
             <div class="modal-header">
-                <h5 class="modal-title">Add Products to Proforma Invoice</h5>
+                <h5 class="modal-title" data-product-modal-title>Add Products to Invoice</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
             <div class="modal-body">
                 <form id="productForm" method="post" novalidate>
                     <input type="hidden" name="pi_token" id="pi_token" value="">
+                    <input type="hidden" name="ci_token" id="ci_token" value="">
                     <div class="mb-4">
                         <span class="text-uppercase small fw-semibold text-muted">Product Source</span>
                         <div class="d-flex flex-wrap gap-3 mt-2">
@@ -48,7 +49,7 @@
 
                     <div id="newProductFields" class="d-none">
                         <div class="alert alert-info" role="alert">
-                            This product will be saved to the vendor catalogue and linked to the proforma invoice.
+                            This product will be saved to the vendor catalogue and linked to the selected invoice.
                         </div>
                         <div class="row g-3">
                             <div class="col-md-6">
@@ -138,7 +139,7 @@
 
                     <div id="productFormAlert" class="alert d-none mt-4" role="alert"></div>
                 </form>
-                <div class="border-top pt-4 mt-4">
+                <div class="border-top pt-4 mt-4" data-pi-only>
                     <div class="d-flex flex-column flex-lg-row justify-content-between align-items-lg-center gap-2">
                         <div>
                             <span class="text-uppercase small fw-semibold text-muted">Remove Existing Product</span>

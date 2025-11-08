@@ -80,6 +80,14 @@ $hasCommercialInvoices = !empty($commercialInvoices);
                             </div>
                             <p class="text-muted small mb-0">Created <?php echo e($createdAt); ?></p>
                         </div>
+                        <?php
+                        $proformaToken = (string) ($proformaData['token'] ?? '');
+                        if ($proformaToken !== ''):
+                        ?>
+                            <div class="workspace-ci-actions d-flex flex-column flex-sm-row flex-wrap gap-2 w-100 w-xl-auto justify-content-xl-end">
+                                <button class="btn btn-primary flex-fill" type="button" data-action="add-product" data-ci-token="<?php echo e($ciToken); ?>" data-pi-token="<?php echo e($proformaToken); ?>">Add Product</button>
+                            </div>
+                        <?php endif; ?>
                     </div>
                 </div>
                 <div class="card-body pt-4" data-ci-container>
